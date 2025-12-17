@@ -1,0 +1,91 @@
+# Sensor Fusion Configuration for Humanoid Robot
+# Multi-sensor fusion parameters for camera, LiDAR, and IMU integration
+
+/**:
+  ros__parameters:
+    # Input topics
+    camera_topic: "/camera/rgb/image_rect_color"
+    camera_info_topic: "/camera/rgb/camera_info"
+    lidar_topic: "/lidar/points"
+    imu_topic: "/imu/data"
+    imu_queue_size: 10
+
+    # Synchronization parameters
+    sync:
+      enable_synchronization: true
+      sync_tolerance: 0.01  # Time sync tolerance in seconds
+      queue_size: 10
+
+    # Camera processing
+    camera:
+      processing_rate: 30.0  # Hz
+      enable_rectification: true
+      image_width: 640
+      image_height: 480
+      fov_horizontal: 60.0  # degrees
+      fov_vertical: 45.0    # degrees
+
+    # LiDAR processing
+    lidar:
+      processing_rate: 10.0  # Hz
+      enable_ground_removal: true
+      ground_removal_height: 0.1  # meters above ground
+      clustering:
+        enable_clustering: true
+        cluster_tolerance: 0.5  # meters
+        min_cluster_size: 10
+        max_cluster_size: 25000
+
+    # IMU processing
+    imu:
+      processing_rate: 100.0  # Hz
+      enable_bias_estimation: true
+      bias_alpha: 0.1
+      linear_acceleration_noise_density: 0.017
+      angular_velocity_noise_density: 0.0012
+
+    # Fusion algorithm parameters
+    fusion_algorithm:
+      max_correspondence_distance: 0.5
+      transformation_epsilon: 0.01
+      euclidean_fitness_epsilon: 0.01
+      max_iterations: 100
+      registration_method: "icp"  # Options: icp, gicp, ndt
+
+    # Output configuration
+    output:
+      fused_pose_topic: "/sensor_fusion/pose"
+      fused_pointcloud_topic: "/sensor_fusion/pointcloud"
+      fused_imu_topic: "/sensor_fusion/imu"
+      publish_rate: 50.0  # Hz
+      publish_tf: true
+      tf_publish_rate: 50.0
+      base_frame: "base_link"
+      odom_frame: "odom"
+
+    # Performance parameters
+    performance:
+      enable_multithreading: true
+      num_worker_threads: 4
+      enable_gpu_acceleration: true
+      max_buffer_size: 100
+      enable_memory_pool: true
+
+    # Validation parameters
+    validation:
+      validate_sensor_data: true
+      max_sensor_delay: 0.1  # seconds
+      min_sensor_frequency: 5.0  # Hz
+      enable_emergency_stop: true
+      position_error_threshold: 0.5  # meters
+      orientation_error_threshold: 0.5  # radians
+
+    # Debug parameters
+    debug:
+      enable_detailed_logging: false
+      log_level: "INFO"
+      enable_profiling: false
+      profile_output_path: "/tmp/isaac_ros_profile.json"
+      enable_visualization: true
+      visualization_rate: 10.0  # Hz
+      publish_debug_topics: true

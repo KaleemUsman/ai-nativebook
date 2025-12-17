@@ -1,0 +1,239 @@
+# Isaac ROS Navigation API Contract
+
+openapi: 3.0.0
+info:
+  title: Isaac ROS Navigation API
+  description: API for humanoid navigation using Nav2 with Isaac Sim integration
+  version: 1.0.0
+  contact:
+    name: Isaac ROS Team
+    url: https://nvidia-isaac-ros.github.io/
+    email: isaac-ros@nvidia.com
+
+paths:
+  /navigation/goal:
+    post:
+      summary: Set navigation goal for the humanoid robot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - x
+                - y
+                - theta
+              properties:
+                x:
+                  type: number
+                  description: X coordinate of goal position in meters
+                y:
+                  type: number
+                  description: Y coordinate of goal position in meters
+                theta:
+                  type: number
+                  description: Orientation of goal in radians
+                frame_id:
+                  type: string
+                  description: Coordinate frame for the goal (default: map)
+                behavior_tree:
+                  type: string
+                  description: Behavior tree to use for navigation (default: default_nav_tree)
+      responses:
+        '200':
+          description: Navigation goal accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  goal_id:
+                    type: string
+                    description: Unique identifier for the navigation goal
+                  status:
+                    type: string
+                    enum: [accepted, rejected, executing]
+                  estimated_time:
+                    type: number
+                    description: Estimated time to reach goal in seconds
+        '400':
+          description: Invalid goal parameters
+        '500':
+          description: Error processing navigation goal
+
+  /navigation/status:
+    get:
+      summary: Get current navigation status
+      responses:
+        '200':
+          description: Current navigation status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [idle, planning, executing, completed, failed, canceled]
+                  current_pose:
+                    type: object
+                    properties:
+                      x:
+                        type: number
+                        description: Current X coordinate
+                      y:
+                        type: number
+                        description: Current Y coordinate
+                      theta:
+                        type: number
+                        description: Current orientation in radians
+                  goal_pose:
+                    type: object
+                    properties:
+                      x:
+                        type: number
+                        description: Goal X coordinate
+                      y:
+                        type: number
+                        description: Goal Y coordinate
+                      theta:
+                        type: number
+                        description: Goal orientation in radians
+                  progress:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                    description: Progress toward goal (0.0 to 1.0)
+                  remaining_distance:
+                    type: number
+                    description: Distance remaining to goal in meters
+        '500':
+          description: Error retrieving navigation status
+
+  /navigation/cancel:
+    post:
+      summary: Cancel current navigation goal
+      responses:
+        '200':
+          description: Navigation goal canceled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [canceled, not_active]
+                  previous_goal_id:
+                    type: string
+                    description: ID of the canceled goal
+        '500':
+          description: Error canceling navigation goal
+
+  /navigation/path:
+    get:
+      summary: Get current planned path
+      parameters:
+        - name: resolution
+          in: query
+          description: Resolution of path points (distance between points in meters)
+          schema:
+            type: number
+            default: 0.1
+      responses:
+        '200':
+          description: Current planned path
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  path:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        x:
+                          type: number
+                          description: X coordinate of path point
+                        y:
+                          type: number
+                          description: Y coordinate of path point
+                        theta:
+                          type: number
+                          description: Orientation at path point in radians
+                        velocity:
+                          type: number
+                          description: Recommended velocity at this point
+                  path_length:
+                    type: number
+                    description: Total length of the path in meters
+        '500':
+          description: Error retrieving path data
+
+  /navigation/obstacles:
+    get:
+      summary: Get detected obstacles in the environment
+      responses:
+        '200':
+          description: Detected obstacles in the environment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  obstacles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier for the obstacle
+                        type:
+                          type: string
+                          enum: [static, dynamic]
+                          description: Type of obstacle
+                        position:
+                          type: object
+                          properties:
+                            x:
+                              type: number
+                              description: X coordinate of obstacle center
+                            y:
+                              type: number
+                              description: Y coordinate of obstacle center
+                            z:
+                              type: number
+                              description: Z coordinate of obstacle center
+                        size:
+                          type: object
+                          properties:
+                            length:
+                              type: number
+                              description: Length of obstacle in meters
+                            width:
+                              type: number
+                              description: Width of obstacle in meters
+                            height:
+                              type: number
+                              description: Height of obstacle in meters
+                        velocity:
+                          type: object
+                          properties:
+                            x:
+                              type: number
+                              description: X velocity component (for dynamic obstacles)
+                            y:
+                              type: number
+                              description: Y velocity component (for dynamic obstacles)
+                            z:
+                              type: number
+                              description: Z velocity component (for dynamic obstacles)
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Time when obstacles were detected
+        '500':
+          description: Error retrieving obstacle data

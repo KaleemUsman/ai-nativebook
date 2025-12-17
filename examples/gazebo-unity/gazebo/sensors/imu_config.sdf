@@ -1,0 +1,389 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <model name="humanoid_imu_sensors">
+    <!-- IMU sensor configuration for humanoid robot balance and orientation -->
+    <!-- Primary IMU positioned at the center of mass (torso) for balance control -->
+    <link name="imu_torso_link">
+      <pose>0.0 0.0 0.8 0 0 0</pose> <!-- Positioned at approximate center of mass -->
+      <inertial>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>1e-6</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1e-6</iyy>
+          <iyz>0</iyz>
+          <izz>1e-6</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Small visual representation for the IMU -->
+      <visual name="imu_visual">
+        <geometry>
+          <box>
+            <size>0.01 0.01 0.01</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1 0 0 1</ambient>
+          <diffuse>1 0 0 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- Primary IMU sensor definition -->
+      <sensor name="imu_torso" type="imu">
+        <pose>0 0 0 0 0 0</pose>
+        <imu>
+          <!-- Angular velocity measurements with noise modeling -->
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev> <!-- 0.2 mrad/s standard deviation -->
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+
+          <!-- Linear acceleration measurements with noise modeling -->
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev> <!-- 17 mg standard deviation -->
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+        <always_on>true</always_on>
+        <update_rate>100.0</update_rate> <!-- 100 Hz update rate for balance control -->
+        <plugin name="imu_torso_controller" filename="libgazebo_ros_imu.so">
+          <ros>
+            <namespace>/humanoid</namespace>
+            <remapping>~/out:=imu/torso/data</remapping>
+          </ros>
+          <frame_name>imu_torso_link</frame_name>
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- Secondary IMU positioned at the head for orientation tracking -->
+    <link name="imu_head_link">
+      <pose>0.0 0.0 1.7 0 0 0</pose> <!-- Positioned at head level -->
+      <inertial>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>1e-6</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1e-6</iyy>
+          <iyz>0</iyz>
+          <izz>1e-6</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Small visual representation for the head IMU -->
+      <visual name="imu_head_visual">
+        <geometry>
+          <box>
+            <size>0.01 0.01 0.01</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0 1 0 1</ambient>
+          <diffuse>0 1 0 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- Head IMU sensor definition -->
+      <sensor name="imu_head" type="imu">
+        <pose>0 0 0 0 0 0</pose>
+        <imu>
+          <!-- Angular velocity measurements with noise modeling -->
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+
+          <!-- Linear acceleration measurements with noise modeling -->
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+        <always_on>true</always_on>
+        <update_rate>100.0</update_rate> <!-- 100 Hz update rate for head orientation -->
+        <plugin name="imu_head_controller" filename="libgazebo_ros_imu.so">
+          <ros>
+            <namespace>/humanoid</namespace>
+            <remapping>~/out:=imu/head/data</remapping>
+          </ros>
+          <frame_name>imu_head_link</frame_name>
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- IMU on left foot for ground contact detection -->
+    <link name="imu_left_foot_link">
+      <pose>0.0 0.1 -0.05 0 0 0</pose> <!-- Positioned at left foot -->
+      <inertial>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>1e-6</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1e-6</iyy>
+          <iyz>0</iyz>
+          <izz>1e-6</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Small visual representation for the left foot IMU -->
+      <visual name="imu_left_foot_visual">
+        <geometry>
+          <box>
+            <size>0.01 0.01 0.01</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0 0 1 1</ambient>
+          <diffuse>0 0 1 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- Left foot IMU sensor definition -->
+      <sensor name="imu_left_foot" type="imu">
+        <pose>0 0 0 0 0 0</pose>
+        <imu>
+          <!-- Angular velocity measurements with noise modeling -->
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>5e-4</stddev> <!-- Slightly higher noise for foot IMU -->
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>5e-4</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>5e-4</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+
+          <!-- Linear acceleration measurements with noise modeling -->
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-2</stddev> <!-- Higher noise for foot IMU due to impacts -->
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-2</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-2</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+        <always_on>true</always_on>
+        <update_rate>200.0</update_rate> <!-- Higher rate for contact detection -->
+        <plugin name="imu_left_foot_controller" filename="libgazebo_ros_imu.so">
+          <ros>
+            <namespace>/humanoid</namespace>
+            <remapping>~/out:=imu/left_foot/data</remapping>
+          </ros>
+          <frame_name>imu_left_foot_link</frame_name>
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- IMU on right foot for ground contact detection -->
+    <link name="imu_right_foot_link">
+      <pose>0.0 -0.1 -0.05 0 0 0</pose> <!-- Positioned at right foot -->
+      <inertial>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>1e-6</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1e-6</iyy>
+          <iyz>0</iyz>
+          <izz>1e-6</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Small visual representation for the right foot IMU -->
+      <visual name="imu_right_foot_visual">
+        <geometry>
+          <box>
+            <size>0.01 0.01 0.01</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1 1 0 1</ambient>
+          <diffuse>1 1 0 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- Right foot IMU sensor definition -->
+      <sensor name="imu_right_foot" type="imu">
+        <pose>0 0 0 0 0 0</pose>
+        <imu>
+          <!-- Angular velocity measurements with noise modeling -->
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>5e-4</stddev> <!-- Slightly higher noise for foot IMU -->
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>5e-4</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>5e-4</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+
+          <!-- Linear acceleration measurements with noise modeling -->
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-2</stddev> <!-- Higher noise for foot IMU due to impacts -->
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-2</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-2</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+        <always_on>true</always_on>
+        <update_rate>200.0</update_rate> <!-- Higher rate for contact detection -->
+        <plugin name="imu_right_foot_controller" filename="libgazebo_ros_imu.so">
+          <ros>
+            <namespace>/humanoid</namespace>
+            <remapping>~/out:=imu/right_foot/data</remapping>
+          </ros>
+          <frame_name>imu_right_foot_link</frame_name>
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- Joint to connect torso IMU to the robot -->
+    <joint name="imu_torso_to_torso" type="fixed">
+      <parent>torso_link</parent> <!-- This would connect to actual torso link in full robot model -->
+      <child>imu_torso_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint>
+
+    <!-- Joint to connect head IMU to the robot -->
+    <joint name="imu_head_to_head" type="fixed">
+      <parent>head_link</parent> <!-- This would connect to actual head link in full robot model -->
+      <child>imu_head_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint>
+
+    <!-- Joint to connect left foot IMU to the robot -->
+    <joint name="imu_left_foot_to_left_foot" type="fixed">
+      <parent>left_foot_link</parent> <!-- This would connect to actual left foot link in full robot model -->
+      <child>imu_left_foot_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint>
+
+    <!-- Joint to connect right foot IMU to the robot -->
+    <joint name="imu_right_foot_to_right_foot" type="fixed">
+      <parent>right_foot_link</parent> <!-- This would connect to actual right foot link in full robot model -->
+      <child>imu_right_foot_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint>
+  </model>
+</sdf>

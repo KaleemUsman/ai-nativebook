@@ -1,0 +1,121 @@
+# Isaac ROS Configuration Template
+# This file contains common configuration parameters for Isaac ROS perception pipelines
+
+# VSLAM Configuration
+vslam:
+  # Visual-inertial SLAM parameters
+  enable_rectification: true
+  enable_fisheye_rectification: true
+  enable_stereo_rectification: true
+
+  # Feature tracking parameters
+  feature_detector:
+    max_features: 1000
+    min_distance: 10
+    quality_level: 0.01
+    pyramid_levels: 4
+
+  # Tracking parameters
+  tracker:
+    max_level: 4
+    min_eig_threshold: 0.0001
+    max_iterations: 30
+
+  # Optimization parameters
+  optimizer:
+    max_iterations: 15
+    convergence_threshold: 1e-6
+    trust_region_radius_init: 1.0
+
+  # IMU integration
+  imu:
+    enable_integration: true
+    noise_density: 0.001
+    random_walk: 0.0001
+
+# Sensor Fusion Configuration
+sensor_fusion:
+  # Multi-sensor fusion parameters
+  enable_sensor_fusion: true
+  sync_tolerance: 0.01  # Time sync tolerance in seconds
+
+  # Camera parameters
+  camera:
+    image_topic: "/camera/rgb/image_raw"
+    camera_info_topic: "/camera/rgb/camera_info"
+    queue_size: 10
+
+  # LiDAR parameters
+  lidar:
+    pointcloud_topic: "/lidar/points"
+    queue_size: 10
+
+  # IMU parameters
+  imu:
+    topic: "/imu/data"
+    queue_size: 10
+
+  # Fusion algorithm parameters
+  fusion_algorithm:
+    max_correspondence_distance: 0.5
+    transformation_epsilon: 0.01
+    euclidean_fitness_epsilon: 0.01
+    max_iterations: 100
+
+# Perception Pipeline Configuration
+perception_pipeline:
+  # Processing rates
+  camera_processing_rate: 30.0  # Hz
+  lidar_processing_rate: 10.0   # Hz
+  imu_processing_rate: 100.0    # Hz
+
+  # Memory management
+  max_buffer_size: 100
+  enable_memory_pool: true
+
+  # Performance parameters
+  enable_multithreading: true
+  num_worker_threads: 4
+  enable_gpu_acceleration: true
+
+  # Output format
+  output_frame_id: "odom"
+  publish_tf: true
+  tf_publish_rate: 50.0  # Hz
+
+# Hardware Acceleration Configuration
+hardware_acceleration:
+  # GPU compute parameters
+  enable_gpu_compute: true
+  gpu_device_id: 0
+  max_gpu_memory: "2GB"
+
+  # CUDA parameters
+  cuda:
+    enable_tensor_cores: true
+    enable_cublas: true
+    enable_cufft: true
+
+# Debug and Logging Configuration
+debug:
+  enable_detailed_logging: false
+  log_level: "INFO"
+  enable_profiling: false
+  profile_output_path: "/tmp/isaac_ros_profile.json"
+
+  # Visualization parameters
+  enable_visualization: true
+  visualization_rate: 10.0  # Hz
+  publish_debug_topics: true
+
+# Safety and Validation Configuration
+safety:
+  # Validation parameters for sensor data
+  validate_sensor_data: true
+  max_sensor_delay: 0.1  # seconds
+  min_sensor_frequency: 5.0  # Hz
+
+  # Emergency stop parameters
+  enable_emergency_stop: true
+  position_error_threshold: 0.5  # meters
+  orientation_error_threshold: 0.5  # radians

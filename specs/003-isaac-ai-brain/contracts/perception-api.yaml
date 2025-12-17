@@ -1,0 +1,196 @@
+# Isaac ROS Perception API Contract
+
+openapi: 3.0.0
+info:
+  title: Isaac ROS Perception API
+  description: API for hardware-accelerated perception pipelines using Isaac ROS
+  version: 1.0.0
+  contact:
+    name: Isaac ROS Team
+    url: https://nvidia-isaac-ros.github.io/
+    email: isaac-ros@nvidia.com
+
+paths:
+  /vslam/pose:
+    get:
+      summary: Get current pose estimate from VSLAM
+      responses:
+        '200':
+          description: Current pose estimate
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  position:
+                    type: object
+                    properties:
+                      x:
+                        type: number
+                        description: X coordinate in meters
+                      y:
+                        type: number
+                        description: Y coordinate in meters
+                      z:
+                        type: number
+                        description: Z coordinate in meters
+                  orientation:
+                    type: object
+                    properties:
+                      x:
+                        type: number
+                        description: X component of quaternion
+                      y:
+                        type: number
+                        description: Y component of quaternion
+                      z:
+                        type: number
+                        description: Z component of quaternion
+                      w:
+                        type: number
+                        description: W component of quaternion
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Time when pose was estimated
+                  confidence:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                    description: Confidence level of the pose estimate
+        '500':
+          description: Error in pose estimation
+
+  /sensor_fusion/data:
+    get:
+      summary: Get fused sensor data
+      responses:
+        '200':
+          description: Fused sensor data from multiple sources
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  camera_data:
+                    type: object
+                    description: Processed camera data
+                    properties:
+                      rgb_image:
+                        type: string
+                        description: Base64 encoded RGB image
+                      timestamp:
+                        type: string
+                        format: date-time
+                      resolution:
+                        type: object
+                        properties:
+                          width:
+                            type: integer
+                          height:
+                            type: integer
+                  lidar_data:
+                    type: object
+                    description: Processed LiDAR point cloud
+                    properties:
+                      points:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            x:
+                              type: number
+                            y:
+                              type: number
+                            z:
+                              type: number
+                            intensity:
+                              type: number
+                      timestamp:
+                        type: string
+                        format: date-time
+                  imu_data:
+                    type: object
+                    description: Processed IMU data
+                    properties:
+                      linear_acceleration:
+                        type: object
+                        properties:
+                          x:
+                            type: number
+                          y:
+                            type: number
+                          z:
+                            type: number
+                      angular_velocity:
+                        type: object
+                        properties:
+                          x:
+                            type: number
+                          y:
+                            type: number
+                          z:
+                            type: number
+                      orientation:
+                        type: object
+                        properties:
+                          x:
+                            type: number
+                          y:
+                            type: number
+                          z:
+                            type: number
+                          w:
+                            type: number
+                      timestamp:
+                        type: string
+                        format: date-time
+        '500':
+          description: Error in sensor fusion
+
+  /synthetic_dataset/generate:
+    post:
+      summary: Generate synthetic dataset from Isaac Sim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                environment:
+                  type: string
+                  description: Name of the simulation environment
+                lighting_conditions:
+                  type: array
+                  items:
+                    type: string
+                  description: List of lighting conditions to include
+                duration:
+                  type: integer
+                  description: Duration of data generation in seconds
+                output_path:
+                  type: string
+                  description: Path where dataset should be saved
+      responses:
+        '200':
+          description: Dataset generation started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dataset_id:
+                    type: string
+                    description: Unique identifier for the dataset
+                  status:
+                    type: string
+                    enum: [started, processing, completed]
+                  estimated_completion:
+                    type: string
+                    format: date-time
+                    description: Estimated time when dataset generation will complete
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Error starting dataset generation

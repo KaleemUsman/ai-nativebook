@@ -1,0 +1,252 @@
+# Simulation API Contract for Gazebo & Unity Digital Twin
+
+openapi: 3.0.0
+info:
+  title: Digital Twin Simulation API
+  description: API for controlling and monitoring Gazebo-Unity digital twin simulations
+  version: 1.0.0
+
+paths:
+  /simulation/start:
+    post:
+      summary: Start a new simulation session
+      description: Initializes both Gazebo physics simulation and Unity visualization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                environment:
+                  type: string
+                  description: Gazebo world file name
+                  example: "humanoid_lab.sdf"
+                robot_model:
+                  type: string
+                  description: URDF model path
+                  example: "models/humanoid.urdf"
+                unity_scene:
+                  type: string
+                  description: Unity scene name
+                  example: "HumanoidLab"
+              required:
+                - environment
+                - robot_model
+      responses:
+        '200':
+          description: Simulation started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                    description: Unique identifier for the simulation session
+                  gazebo_status:
+                    type: string
+                    description: Status of Gazebo simulation
+                  unity_status:
+                    type: string
+                    description: Status of Unity visualization
+                example:
+                  session_id: "sim_12345"
+                  gazebo_status: "running"
+                  unity_status: "connected"
+
+  /simulation/{session_id}/stop:
+    post:
+      summary: Stop a simulation session
+      description: Terminates both Gazebo physics simulation and Unity visualization
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Simulation stopped successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "stopped"
+
+  /simulation/{session_id}/sensor-data:
+    get:
+      summary: Get current sensor data
+      description: Retrieves sensor data from the simulation (LiDAR, IMU, cameras)
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sensor_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [lidar, imu, camera, joint_states]
+      responses:
+        '200':
+          description: Sensor data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                  sensor_type:
+                    type: string
+                  data:
+                    type: object
+                    description: Sensor-specific data structure
+
+  /simulation/{session_id}/robot-control:
+    post:
+      summary: Send control commands to robot
+      description: Sends joint commands or velocity commands to the simulated robot
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command_type:
+                  type: string
+                  enum: [joint_trajectory, velocity, position]
+                joints:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      position:
+                        type: number
+                      velocity:
+                        type: number
+                      effort:
+                        type: number
+              required:
+                - command_type
+                - joints
+      responses:
+        '200':
+          description: Control command sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                  type: string
+                  example: "command_sent"
+
+  /simulation/{session_id}/ai-agent/connect:
+    post:
+      summary: Connect AI agent to simulation
+      description: Establishes connection between AI agent and simulation environment
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_type:
+                  type: string
+                  enum: [reinforcement_learning, rule_based, neural_network]
+                sensor_subscriptions:
+                  type: array
+                  items:
+                    type: string
+                control_frequency:
+                  type: number
+                  description: Control commands per second
+              required:
+                - agent_type
+                - sensor_subscriptions
+      responses:
+        '200':
+          description: AI agent connected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connection_id:
+                    type: string
+                  status:
+                    type: string
+                    example: "connected"
+
+components:
+  schemas:
+    SensorData:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        sensor_id:
+          type: string
+        sensor_type:
+          type: string
+          enum: [lidar, imu, camera, joint_states]
+        values:
+          type: array
+          items:
+            type: number
+    RobotState:
+      type: object
+      properties:
+        joint_states:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              position:
+                type: number
+              velocity:
+                type: number
+              effort:
+                type: number
+        imu_data:
+          type: object
+          properties:
+            orientation:
+              type: array
+              items:
+                type: number
+            angular_velocity:
+              type: array
+              items:
+                type: number
+            linear_acceleration:
+              type: array
+              items:
+                type: number

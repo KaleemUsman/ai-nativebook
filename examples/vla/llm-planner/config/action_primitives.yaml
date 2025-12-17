@@ -1,0 +1,273 @@
+# VLA Action Primitives Definition
+# Defines the available action primitives and their schemas
+
+version: "1.0"
+
+primitives:
+  - name: navigate_to
+    description: "Navigate the robot to a specified location"
+    category: navigation
+    parameters:
+      - name: location
+        type: string
+        description: "Named location (e.g., 'kitchen', 'office')"
+        required: false
+      - name: pose
+        type: object
+        description: "Target pose with x, y, z, yaw"
+        required: false
+        schema:
+          x: {type: float, description: "X position in meters"}
+          y: {type: float, description: "Y position in meters"}
+          z: {type: float, description: "Z position (usually 0)", default: 0.0}
+          yaw: {type: float, description: "Orientation in radians", default: 0.0}
+      - name: approach_distance
+        type: float
+        description: "Stop this distance from target (meters)"
+        default: 0.0
+        required: false
+    preconditions:
+      - "robot_mobile"
+      - "navigation_enabled"
+    expected_outcomes:
+      - "robot_at_location"
+    timeout_s: 60.0
+    interruptible: true
+
+  - name: look_at
+    description: "Orient the robot's sensors toward a target"
+    category: perception
+    parameters:
+      - name: target
+        type: string
+        description: "Object name to look at"
+        required: false
+      - name: target_id
+        type: string
+        description: "Specific object ID"
+        required: false
+      - name: direction
+        type: object
+        description: "Direction vector (x, y, z)"
+        required: false
+        schema:
+          x: {type: float}
+          y: {type: float}
+          z: {type: float}
+      - name: duration_s
+        type: float
+        description: "How long to maintain gaze"
+        default: 2.0
+    preconditions:
+      - "head_controllable"
+    expected_outcomes:
+      - "target_in_view"
+    timeout_s: 10.0
+    interruptible: true
+
+  - name: scan_environment
+    description: "Perform an environmental scan to detect objects"
+    category: perception
+    parameters:
+      - name: area
+        type: string
+        description: "Named area to scan"
+        required: false
+      - name: mode
+        type: string
+        description: "Scan mode: quick, full, detailed"
+        enum: ["quick", "full", "detailed"]
+        default: "full"
+      - name: object_classes
+        type: array
+        description: "Specific object classes to look for"
+        required: false
+        items: {type: string}
+    preconditions:
+      - "perception_enabled"
+    expected_outcomes:
+      - "objects_detected"
+    timeout_s: 30.0
+    interruptible: true
+
+  - name: identify_object
+    description: "Detect and localize a specific object"
+    category: perception
+    parameters:
+      - name: object_name
+        type: string
+        description: "Object class name"
+        required: true
+      - name: color
+        type: string
+        description: "Optional color filter"
+        required: false
+      - name: location_hint
+        type: string
+        description: "Where to look first"
+        required: false
+    preconditions:
+      - "perception_enabled"
+    expected_outcomes:
+      - "object_found"
+      - "object_localized"
+    timeout_s: 15.0
+    interruptible: true
+
+  - name: pick_up
+    description: "Grasp and lift an object"
+    category: manipulation
+    parameters:
+      - name: object_id
+        type: string
+        description: "ID of object to pick up"
+        required: true
+      - name: grasp_type
+        type: string
+        description: "Type of grasp"
+        enum: ["power", "precision", "pinch"]
+        default: "power"
+      - name: approach_direction
+        type: string
+        description: "Direction to approach from"
+        enum: ["top", "side", "front"]
+        default: "top"
+    preconditions:
+      - "gripper_empty"
+      - "object_reachable"
+      - "manipulation_enabled"
+    expected_outcomes:
+      - "object_held"
+    timeout_s: 45.0
+    interruptible: false
+
+  - name: place
+    description: "Place a held object at a location"
+    category: manipulation
+    parameters:
+      - name: location
+        type: string
+        description: "Named location"
+        required: false
+      - name: pose
+        type: object
+        description: "Placement pose"
+        required: false
+        schema:
+          x: {type: float}
+          y: {type: float}
+          z: {type: float}
+          yaw: {type: float}
+      - name: place_style
+        type: string
+        description: "How to place the object"
+        enum: ["drop", "gentle", "precise"]
+        default: "gentle"
+    preconditions:
+      - "gripper_holding"
+      - "location_reachable"
+      - "manipulation_enabled"
+    expected_outcomes:
+      - "object_placed"
+      - "gripper_empty"
+    timeout_s: 30.0
+    interruptible: false
+
+  - name: say
+    description: "Speak text to the user via TTS"
+    category: communication
+    parameters:
+      - name: text
+        type: string
+        description: "Text to speak"
+        required: true
+      - name: priority
+        type: string
+        description: "Speech priority"
+        enum: ["low", "normal", "high"]
+        default: "normal"
+      - name: wait_for_completion
+        type: boolean
+        description: "Wait for speech to finish"
+        default: true
+    preconditions:
+      - "tts_enabled"
+    expected_outcomes:
+      - "message_delivered"
+    timeout_s: 30.0
+    interruptible: true
+
+  - name: wait
+    description: "Pause execution"
+    category: control
+    parameters:
+      - name: duration
+        type: float
+        description: "Seconds to wait"
+        required: false
+      - name: condition
+        type: string
+        description: "Condition to wait for"
+        required: false
+        enum: ["object_stable", "user_ready", "path_clear"]
+    preconditions: []
+    expected_outcomes:
+      - "wait_complete"
+    timeout_s: 60.0
+    interruptible: true
+
+  - name: cancel
+    description: "Cancel the current action or plan"
+    category: control
+    parameters: []
+    preconditions: []
+    expected_outcomes:
+      - "action_cancelled"
+    timeout_s: 5.0
+    interruptible: false
+
+# Function calling schema for LLM
+function_schema:
+  name: "create_action_plan"
+  description: "Create a sequence of robot actions to accomplish a task"
+  parameters:
+    type: object
+    properties:
+      explanation:
+        type: string
+        description: "Brief explanation of the plan"
+      primitives:
+        type: array
+        description: "Ordered list of action primitives"
+        items:
+          type: object
+          properties:
+            action_type:
+              type: string
+              enum:
+                - navigate_to
+                - look_at
+                - scan_environment
+                - identify_object
+                - pick_up
+                - place
+                - say
+                - wait
+                - cancel
+            parameters:
+              type: object
+              description: "Action-specific parameters"
+            preconditions:
+              type: array
+              items: {type: string}
+              description: "Conditions that must be true before execution"
+            expected_outcomes:
+              type: array
+              items: {type: string}
+              description: "Expected results after execution"
+          required:
+            - action_type
+            - parameters
+    required:
+      - explanation
+      - primitives

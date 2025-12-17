@@ -1,0 +1,168 @@
+openapi: 3.0.0
+info:
+  title: ROS 2 Book RAG API
+  description: API for retrieving ROS 2 documentation content using RAG system
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://ros2-book-api.example.com
+    description: Production server
+
+paths:
+  /api/search:
+    post:
+      summary: Search ROS 2 documentation
+      description: Search through ROS 2 book content using natural language queries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid query
+        '500':
+          description: Internal server error
+
+  /api/chapters:
+    get:
+      summary: List all ROS 2 chapters
+      description: Retrieve a list of all available ROS 2 book chapters
+      responses:
+        '200':
+          description: List of chapters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterListResponse'
+        '500':
+          description: Internal server error
+
+  /api/chapters/{chapterId}:
+    get:
+      summary: Get specific chapter content
+      description: Retrieve content of a specific ROS 2 chapter
+      parameters:
+        - name: chapterId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the chapter to retrieve
+      responses:
+        '200':
+          description: Chapter content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterContentResponse'
+        '404':
+          description: Chapter not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    SearchRequest:
+      type: object
+      required:
+        - query
+        - top_k
+      properties:
+        query:
+          type: string
+          description: Natural language search query
+          example: "How do ROS 2 nodes communicate with each other?"
+        top_k:
+          type: integer
+          description: Number of results to return
+          default: 5
+          example: 3
+        filters:
+          type: object
+          description: Additional filters for search
+          properties:
+            chapter:
+              type: string
+              description: Restrict search to specific chapter
+            concept:
+              type: string
+              description: Restrict search to specific ROS 2 concept
+
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        query:
+          type: string
+          description: The original query
+        execution_time:
+          type: number
+          description: Time taken to execute the search in seconds
+
+    SearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the result
+        content:
+          type: string
+          description: The matching content
+        chapter:
+          $ref: '#/components/schemas/ChapterInfo'
+        score:
+          type: number
+          description: Relevance score between 0 and 1
+        source:
+          type: string
+          description: Source of the content (text, code, diagram)
+
+    ChapterInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Chapter identifier
+        title:
+          type: string
+          description: Chapter title
+        position:
+          type: integer
+          description: Position in the book
+
+    ChapterListResponse:
+      type: object
+      properties:
+        chapters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChapterInfo'
+
+    ChapterContentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Chapter identifier
+        title:
+          type: string
+          description: Chapter title
+        content:
+          type: string
+          description: Full chapter content in MDX format
+        related_content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'

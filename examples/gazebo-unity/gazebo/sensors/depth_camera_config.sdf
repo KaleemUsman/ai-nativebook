@@ -1,0 +1,179 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <model name="humanoid_depth_camera_sensor">
+    <!-- Depth camera sensor configuration for humanoid robot -->
+    <!-- Positioned on the head for visual perception and navigation -->
+    <link name="depth_camera_link">
+      <pose>0.0 0.0 1.65 0 0 0</pose> <!-- Positioned slightly below head level -->
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.0001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0001</iyy>
+          <iyz>0</iyz>
+          <izz>0.0001</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Depth camera collision geometry -->
+      <collision name="depth_camera_collision">
+        <geometry>
+          <box>
+            <size>0.05 0.1 0.03</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- Depth camera visual representation -->
+      <visual name="depth_camera_visual">
+        <geometry>
+          <box>
+            <size>0.05 0.1 0.03</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.3 0.3 0.3 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+
+      <!-- Depth camera sensor definition -->
+      <sensor name="humanoid_depth_camera" type="depth">
+        <pose>0 0 0 0 0 0</pose>
+        <camera>
+          <!-- Camera parameters -->
+          <horizontal_fov>1.047</horizontal_fov>  <!-- 60 degrees -->
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>  <!-- Near clipping distance (m) -->
+            <far>10.0</far>   <!-- Far clipping distance (m) -->
+          </clip>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+        </camera>
+        <always_on>true</always_on>
+        <update_rate>30.0</update_rate> <!-- 30 Hz update rate for real-time perception -->
+        <plugin name="camera_controller" filename="libgazebo_ros_openni_kinect.so">
+          <ros>
+            <namespace>/humanoid</namespace>
+            <remapping>~/rgb/image_raw:=camera/color/image_raw</remapping>
+            <remapping>~/depth/image_raw:=camera/depth/image_raw</remapping>
+            <remapping>~/depth/points:=camera/depth/points</remapping>
+            <remapping>~/rgb/camera_info:=camera/color/camera_info</remapping>
+          </ros>
+          <frame_name>depth_camera_link</frame_name>
+          <baseline>0.1</baseline>
+          <distortion_k1>0.0</distortion_k1>
+          <distortion_k2>0.0</distortion_k2>
+          <distortion_k3>0.0</distortion_k3>
+          <distortion_t1>0.0</distortion_t1>
+          <distortion_t2>0.0</distortion_t2>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- Alternative depth camera configuration for torso-mounted sensor -->
+    <link name="torso_depth_camera_link">
+      <pose>0.1 0.0 0.9 0 0 0</pose> <!-- Positioned on torso, forward-facing -->
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.0001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0001</iyy>
+          <iyz>0</iyz>
+          <izz>0.0001</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Torso-mounted depth camera collision geometry -->
+      <collision name="torso_depth_camera_collision">
+        <geometry>
+          <box>
+            <size>0.05 0.1 0.03</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- Torso-mounted depth camera visual representation -->
+      <visual name="torso_depth_camera_visual">
+        <geometry>
+          <box>
+            <size>0.05 0.1 0.03</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.3 0.3 0.3 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+
+      <!-- Torso-mounted depth camera sensor definition -->
+      <sensor name="torso_depth_camera" type="depth">
+        <pose>0 0 0 0 0 0</pose>
+        <camera>
+          <!-- Camera parameters optimized for torso position -->
+          <horizontal_fov>1.047</horizontal_fov>  <!-- 60 degrees -->
+          <image>
+            <width>320</width>
+            <height>240</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>  <!-- Near clipping distance (m) -->
+            <far>8.0</far>    <!-- Far clipping distance (m) -->
+          </clip>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.01</stddev>
+          </noise>
+        </camera>
+        <always_on>true</always_on>
+        <update_rate>15.0</update_rate> <!-- 15 Hz update rate for torso camera -->
+        <plugin name="torso_camera_controller" filename="libgazebo_ros_openni_kinect.so">
+          <ros>
+            <namespace>/humanoid</namespace>
+            <remapping>~/rgb/image_raw:=torso_camera/color/image_raw</remapping>
+            <remapping>~/depth/image_raw:=torso_camera/depth/image_raw</remapping>
+            <remapping>~/depth/points:=torso_camera/depth/points</remapping>
+            <remapping>~/rgb/camera_info:=torso_camera/color/camera_info</remapping>
+          </ros>
+          <frame_name>torso_depth_camera_link</frame_name>
+          <baseline>0.1</baseline>
+          <distortion_k1>0.0</distortion_k1>
+          <distortion_k2>0.0</distortion_k2>
+          <distortion_k3>0.0</distortion_k3>
+          <distortion_t1>0.0</distortion_t1>
+          <distortion_t2>0.0</distortion_t2>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- Joint to connect depth camera to the robot (example connection to head) -->
+    <joint name="depth_camera_to_head" type="fixed">
+      <parent>head_link</parent> <!-- This would connect to actual head link in full robot model -->
+      <child>depth_camera_link</child>
+      <pose>0.05 0 0 0 0 0</pose> <!-- Offset slightly forward on head -->
+    </joint>
+
+    <!-- Joint to connect torso depth camera to the robot -->
+    <joint name="torso_depth_camera_to_torso" type="fixed">
+      <parent>torso_link</parent> <!-- This would connect to actual torso link in full robot model -->
+      <child>torso_depth_camera_link</child>
+      <pose>0.1 0 0 0 0 0</pose> <!-- Offset slightly forward on torso -->
+    </joint>
+  </model>
+</sdf>

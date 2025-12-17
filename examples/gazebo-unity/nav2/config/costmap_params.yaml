@@ -1,0 +1,205 @@
+# Nav2 Costmap Configuration for Humanoid Robot
+# Optimized for bipedal navigation with perception pipeline integration
+
+# Local Costmap Configuration
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: true
+      global_frame: odom
+      robot_base_frame: base_link
+      update_frequency: 10.0
+      publish_frequency: 5.0
+      rolling_window: true
+      width: 5
+      height: 5
+      resolution: 0.03  # Fine resolution for humanoid navigation
+      
+      # Robot footprint (humanoid approximation)
+      footprint: "[[0.15, 0.10], [0.15, -0.10], [-0.15, -0.10], [-0.15, 0.10]]"
+      footprint_padding: 0.02
+      
+      # Plugins for local costmap
+      plugins: ["voxel_layer", "inflation_layer", "denoise_layer"]
+      
+      # Voxel layer for 3D obstacle detection
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        publish_voxel_map: true
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 40           # 2m height coverage
+        max_obstacle_height: 2.0
+        min_obstacle_height: 0.05
+        mark_threshold: 0
+        unknown_threshold: 15
+        combination_method: 1   # Maximum
+        
+        observation_sources: lidar scan camera_depth
+        
+        lidar:
+          topic: /lidar/points_filtered
+          sensor_frame: lidar_link
+          observation_persistence: 0.0
+          expected_update_rate: 10.0
+          data_type: PointCloud2
+          min_obstacle_height: 0.1
+          max_obstacle_height: 2.0
+          inf_is_valid: false
+          clearing: true
+          marking: true
+          raytrace_min_range: 0.1
+          raytrace_max_range: 8.0
+          obstacle_min_range: 0.1
+          obstacle_max_range: 6.0
+        
+        scan:
+          topic: /scan
+          sensor_frame: base_scan
+          observation_persistence: 0.0
+          expected_update_rate: 10.0
+          data_type: LaserScan
+          min_obstacle_height: 0.0
+          max_obstacle_height: 2.0
+          inf_is_valid: false
+          clearing: true
+          marking: true
+          raytrace_min_range: 0.1
+          raytrace_max_range: 6.0
+          obstacle_min_range: 0.1
+          obstacle_max_range: 5.0
+        
+        camera_depth:
+          topic: /camera/depth/points
+          sensor_frame: camera_link
+          observation_persistence: 0.0
+          expected_update_rate: 15.0
+          data_type: PointCloud2
+          min_obstacle_height: 0.1
+          max_obstacle_height: 2.0
+          inf_is_valid: false
+          clearing: true
+          marking: true
+          raytrace_min_range: 0.3
+          raytrace_max_range: 5.0
+          obstacle_min_range: 0.3
+          obstacle_max_range: 4.0
+      
+      # Inflation layer for safety margins
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        enabled: true
+        inflation_radius: 0.55
+        cost_scaling_factor: 3.0
+        inflate_unknown: false
+        inflate_around_unknown: true
+      
+      # Denoise layer to reduce sensor noise
+      denoise_layer:
+        plugin: "nav2_costmap_2d::DenoiseLayer"
+        enabled: true
+        minimal_group_size: 2
+      
+      always_send_full_costmap: false
+
+# Global Costmap Configuration
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true
+      global_frame: map
+      robot_base_frame: base_link
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      
+      # Robot footprint
+      footprint: "[[0.15, 0.10], [0.15, -0.10], [-0.15, -0.10], [-0.15, 0.10]]"
+      footprint_padding: 0.03
+      
+      resolution: 0.05
+      track_unknown_space: true
+      
+      # Plugins for global costmap
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      
+      # Static layer from map
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        enabled: true
+        map_subscribe_transient_local: true
+        subscribe_to_updates: true
+        transform_tolerance: 0.1
+      
+      # Obstacle layer for dynamic obstacles
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        combination_method: 1
+        footprint_clearing_enabled: true
+        max_obstacle_height: 2.0
+        
+        observation_sources: lidar scan
+        
+        lidar:
+          topic: /lidar/points_filtered
+          sensor_frame: lidar_link
+          observation_persistence: 0.0
+          expected_update_rate: 5.0
+          data_type: PointCloud2
+          min_obstacle_height: 0.1
+          max_obstacle_height: 2.0
+          inf_is_valid: false
+          clearing: true
+          marking: true
+          raytrace_min_range: 0.1
+          raytrace_max_range: 10.0
+          obstacle_min_range: 0.1
+          obstacle_max_range: 8.0
+        
+        scan:
+          topic: /scan
+          sensor_frame: base_scan
+          observation_persistence: 0.0
+          expected_update_rate: 5.0
+          data_type: LaserScan
+          min_obstacle_height: 0.0
+          max_obstacle_height: 2.0
+          inf_is_valid: false
+          clearing: true
+          marking: true
+          raytrace_min_range: 0.1
+          raytrace_max_range: 8.0
+          obstacle_min_range: 0.1
+          obstacle_max_range: 6.0
+      
+      # Inflation layer
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        enabled: true
+        inflation_radius: 0.55
+        cost_scaling_factor: 3.0
+        inflate_unknown: false
+        inflate_around_unknown: true
+      
+      always_send_full_costmap: true
+
+# Costmap filters for special zones
+costmap_filter_info_server:
+  ros__parameters:
+    use_sim_time: true
+    type: 1
+    filter_info_topic: "costmap_filter_info"
+    mask_topic: "filter_mask"
+    base: 0.0
+    multiplier: 0.25
+
+# Speed filter for humanoid (slow down in certain areas)
+speed_filter:
+  ros__parameters:
+    use_sim_time: true
+    plugin: "nav2_costmap_2d::SpeedFilter"
+    enabled: true
+    filter_info_topic: "costmap_filter_info"
+    speed_limit_topic: "speed_limit"
+    percentage: true

@@ -1,55 +1,67 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!-- SYNC IMPACT REPORT:
+Version change: 1.0.0 → 1.1.0
+Modified principles: [PRINCIPLE_1_NAME] → Technical Accuracy, [PRINCIPLE_2_NAME] → Clean Documentation, [PRINCIPLE_3_NAME] → Code Correctness, [PRINCIPLE_4_NAME] → AI-Native Creation, [PRINCIPLE_5_NAME] → Verification Standards, [PRINCIPLE_6_NAME] → Uniform Terminology
+Added sections: Core Principles (completely replaced with project-specific content)
+Removed sections: Template placeholders
+Templates requiring updates: N/A (this is the first version)
+Follow-up TODOs: None
+-->
+# AI-Native Book + RAG Chatbot on Physical AI & Humanoid Robotics Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### Technical Accuracy
+All technical content related to ROS 2, Gazebo, Unity, Isaac, SLAM, VLA, and humanoid robotics must be verified against official documentation and technical specifications. Claims about robotics/AI concepts must be fact-checked through authoritative sources before inclusion. This ensures the highest technical integrity across all documentation and code examples.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### Clean, Modular Docusaurus Documentation
+All content must be structured in clean, modular MDX format suitable for Docusaurus documentation. Each module should be self-contained yet connected to the broader narrative. The documentation structure must support easy navigation, consistent styling, and seamless integration with the RAG system.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### Code Correctness and API Alignment
+All code implementations must align with specified technology stacks: OpenAI Agents/ChatKit, FastAPI, Qdrant, Neon, and related SDKs. Code must be functionally correct, properly tested, and follow established patterns for the respective frameworks. API contracts must be honored with proper error handling and response formatting.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### AI-Native Creation using Spec-Kit Plus + Claude Code
+All content and implementation must leverage Spec-Kit Plus and Claude Code for AI-native creation. This includes using specification-driven development, automated documentation generation, and AI-assisted implementation. The development process should embrace AI tools as primary development assets.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### Verification Standards
+All robotics and AI claims must be verified through official documentation, technical papers, or established resources. No unverified claims should be made about technical capabilities, performance characteristics, or functional properties. All code examples must be tested and proven runnable before inclusion.
 
-### [PRINCIPLE_6_NAME]
+### Uniform Terminology Across Modules
+Consistent terminology must be maintained across all four modules (ROS 2, Gazebo/Unity, Isaac, VLA). Technical terms should be defined once and reused consistently. Acronyms and specialized vocabulary must be introduced clearly and applied uniformly throughout the documentation and codebase.
 
+## Key Standards and Constraints
 
-[PRINCIPLE__DESCRIPTION]
+### Technology Stack Requirements
+- Use Spec-Kit Plus structure for all project artifacts
+- Output all documentation in Docusaurus-ready MDX format
+- RAG system implementation must use FastAPI + Neon + Qdrant + OpenAI SDKs
+- Chatbot functionality must strictly answer from book content or selected text
+- All code must be deployable to GitHub Pages with associated RAG backend
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### Quality Standards
+- Verify all robotics/AI claims via official documentation
+- Produce runnable or structurally correct code examples
+- Maintain uniform terminology across all modules
+- Ensure professional, concise, developer-friendly writing style
+- Implement proper error handling and edge case management
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+## Development Workflow and Quality Gates
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### Implementation Requirements
+- Each module must be developed using specification-driven approach
+- Code implementations must pass all functional and integration tests
+- Documentation must be written in accessible, developer-friendly language
+- All examples must be tested and validated for correctness
+- RAG system must demonstrate accurate retrieval and grounded responses
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### Review Process
+- All content must undergo technical accuracy verification
+- Code changes must include appropriate tests and documentation
+- Cross-module consistency must be validated
+- RAG system functionality must be demonstrated with sample queries
+- Final deployment pipeline must be validated for GitHub Pages
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution governs all aspects of the AI-Native Book + RAG Chatbot project. All development activities must comply with these principles. Amendments to this constitution require explicit documentation of changes, justification for modifications, and approval from project stakeholders. All pull requests and reviews must verify compliance with these principles before merging. The project follows specification-driven development methodology as outlined in the Spec-Kit Plus framework.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.1.0 | **Ratified**: 2025-12-16 | **Last Amended**: 2025-12-16

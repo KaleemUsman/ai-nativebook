@@ -1,0 +1,199 @@
+# VLA LLM Planner Configuration
+# Settings for LLM-based cognitive planning
+
+llm:
+  # Provider configuration
+  provider: "openai"  # openai, anthropic, ollama
+  
+  # Model settings
+  model: "gpt-4"  # gpt-4, gpt-4-turbo, gpt-3.5-turbo
+  temperature: 0.2  # Lower = more deterministic planning
+  max_tokens: 1024  # Maximum response length
+  timeout_s: 15.0  # API timeout in seconds
+  
+  # Retry settings
+  max_retries: 3
+  retry_delay_s: 1.0
+  
+  # Fallback configuration
+  fallback:
+    enabled: true
+    provider: "ollama"
+    model: "llama3"
+    base_url: "http://localhost:11434"
+
+  # Function calling settings
+  function_calling:
+    enabled: true
+    strict_mode: true  # Enforce schema compliance
+
+context:
+  # Context management settings
+  include_robot_state: true
+  include_detected_objects: true
+  include_known_locations: true
+  include_history: true
+  
+  # History settings
+  max_history_items: 10
+  history_summary_enabled: true
+  
+  # Object registry
+  object_confidence_threshold: 0.7
+  object_timeout_s: 60.0  # Remove stale objects after this time
+  
+  # Location registry
+  default_locations:
+    - name: "home"
+      description: "Starting position"
+      pose: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+    - name: "kitchen"
+      description: "Kitchen area"
+      pose: {x: 5.0, y: 2.0, z: 0.0, yaw: 1.57}
+    - name: "living_room"
+      description: "Living room area"
+      pose: {x: 3.0, y: -2.0, z: 0.0, yaw: 0.0}
+    - name: "office"
+      description: "Office/study area"
+      pose: {x: -3.0, y: 4.0, z: 0.0, yaw: 3.14}
+
+planning:
+  # Plan generation settings
+  validate_plans: true
+  max_plan_length: 15  # Maximum primitives per plan
+  
+  # Confirmation requirements
+  require_confirmation_for:
+    - "pick_up"
+    - "place"
+    - "open"
+    - "close"
+  
+  # Safety settings
+  safety_checks_enabled: true
+  collision_check_enabled: true
+  
+  # Plan optimization
+  optimize_navigation: true  # Combine sequential navigate calls
+  merge_wait_primitives: true  # Merge consecutive waits
+
+primitives:
+  # Action primitive definitions with default parameters
+  navigate_to:
+    enabled: true
+    default_timeout_s: 60.0
+    goal_tolerance_m: 0.15
+    yaw_tolerance_rad: 0.1
+    
+  look_at:
+    enabled: true
+    default_timeout_s: 10.0
+    default_duration_s: 2.0
+    
+  scan_environment:
+    enabled: true
+    default_timeout_s: 30.0
+    modes: ["quick", "full", "detailed"]
+    default_mode: "full"
+    
+  identify_object:
+    enabled: true
+    default_timeout_s: 15.0
+    min_confidence: 0.7
+    
+  pick_up:
+    enabled: true
+    default_timeout_s: 45.0
+    grasp_types: ["power", "precision", "pinch"]
+    default_grasp: "power"
+    max_retries: 3
+    
+  place:
+    enabled: true
+    default_timeout_s: 30.0
+    place_styles: ["drop", "gentle", "precise"]
+    default_style: "gentle"
+    
+  say:
+    enabled: true
+    default_timeout_s: 10.0
+    priorities: ["low", "normal", "high"]
+    default_priority: "normal"
+    
+  wait:
+    enabled: true
+    max_duration_s: 60.0
+    
+  cancel:
+    enabled: true
+    immediate: true
+
+prompts:
+  # System prompt template
+  system_prompt: |
+    You are an intelligent robot action planner for a humanoid robot. Your role is to translate 
+    natural language commands into executable action sequences.
+    
+    The robot can perform these actions:
+    - navigate_to: Move to a location (by name or coordinates)
+    - look_at: Orient sensors toward a target
+    - scan_environment: Survey the surroundings
+    - identify_object: Detect and localize a specific object
+    - pick_up: Grasp and lift an object
+    - place: Put down a held object
+    - say: Speak to the user
+    - wait: Pause for a duration
+    - cancel: Stop current action
+    
+    When planning:
+    1. Always validate that preconditions can be met
+    2. Include error handling for potential failures
+    3. Provide clear feedback to the user
+    4. Consider the robot's current state and capabilities
+    5. Generate the minimum necessary steps
+    
+    Always respond with a valid action plan using the create_action_plan function.
+
+  # User prompt template
+  user_prompt_template: |
+    Current Context:
+    - Robot Location: {robot_location}
+    - Gripper State: {gripper_state}
+    - Held Object: {held_object}
+    - Detected Objects: {detected_objects}
+    - Known Locations: {known_locations}
+    - Recent Actions: {recent_actions}
+    
+    User Command: "{command}"
+    Intent Type: {intent_type}
+    Target Object: {target_object}
+    Target Location: {target_location}
+    Modifiers: {modifiers}
+    
+    Generate an action plan to accomplish this command.
+
+ros:
+  # ROS 2 topic and service configuration
+  topics:
+    parsed_intent: "/vla/parsed_intent"
+    task_context: "/vla/task_context"
+    action_plan: "/vla/action_plan"
+    planner_status: "/vla/planner_status"
+    plan_explanation: "/vla/plan_explanation"
+    detected_objects: "/perception/objects"
+    
+  actions:
+    plan_task: "/vla/plan_task"
+    replan: "/vla/replan"
+    
+  services:
+    validate_plan: "/vla/planner/validate_plan"
+    get_capabilities: "/vla/planner/get_capabilities"
+
+logging:
+  level: "INFO"
+  log_prompts: true
+  log_responses: true
+  log_plans: true
+  save_plans_to_file: false
+  plan_log_path: "/tmp/vla_plans"

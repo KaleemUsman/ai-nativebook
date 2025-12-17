@@ -1,0 +1,119 @@
+# VLA Capstone Configuration
+# Complete autonomous humanoid pipeline settings
+
+# Feature flags
+features:
+  voice_input: true
+  llm_planning: true
+  navigation: true
+  perception: true
+  manipulation: true
+  speech_output: true
+  error_recovery: true
+
+# Mode settings
+mode:
+  simulation: true  # Run in simulation mode
+  debug: false      # Enable debug logging
+  record: false     # Record session for playback
+
+# Voice pipeline settings (from whisper_config.yaml)
+voice:
+  config_file: "../whisper/config/whisper_config.yaml"
+  model_size: "small"
+  vad_enabled: true
+
+# LLM planning settings (from llm_config.yaml) 
+planning:
+  config_file: "../llm-planner/config/llm_config.yaml"
+  provider: "openai"
+  model: "gpt-4"
+  fallback_enabled: true
+  confirmation_required:
+    - "pick_up"
+    - "place"
+
+# Execution settings
+execution:
+  max_retries: 3
+  primitive_timeout_s: 60.0
+  abort_on_failure: false
+  safety_checks: true
+
+# Integration settings (Module 2/3)
+integration:
+  # Navigation (Nav2)
+  navigation:
+    enabled: true
+    goal_tolerance_m: 0.15
+    yaw_tolerance_rad: 0.1
+    planner: "NavfnPlanner"
+    controller: "DWBLocalPlanner"
+    
+  # Perception (Isaac ROS)
+  perception:
+    enabled: true
+    object_detection: true
+    min_confidence: 0.7
+    sensor_fusion: true
+    
+  # Manipulation
+  manipulation:
+    enabled: true
+    grasp_planning: true
+    collision_check: true
+
+# Known locations in the environment
+locations:
+  - name: "home"
+    description: "Starting/home position"
+    pose: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+    
+  - name: "kitchen"
+    description: "Kitchen area with counters and appliances"
+    pose: {x: 5.0, y: 2.0, z: 0.0, yaw: 1.57}
+    objects: ["cup", "bottle", "plate"]
+    
+  - name: "living_room"
+    description: "Living room with couch and table"
+    pose: {x: 3.0, y: -2.0, z: 0.0, yaw: 0.0}
+    objects: ["remote", "book", "phone"]
+    
+  - name: "office"
+    description: "Office area with desk and computer"
+    pose: {x: -3.0, y: 4.0, z: 0.0, yaw: 3.14}
+    objects: ["laptop", "pen", "papers"]
+    
+  - name: "desk"
+    description: "Main desk area"
+    pose: {x: 2.5, y: 1.0, z: 0.0, yaw: 0.0}
+    objects: ["phone", "keys", "mug"]
+
+# Speech synthesis settings
+speech:
+  engine: "pyttsx3"  # pyttsx3, gtts, or mock
+  rate: 175
+  volume: 1.0
+  enabled: true
+
+# Error handling settings
+error_handling:
+  tier1_max_retries: 3
+  tier2_replan_enabled: true
+  tier3_user_fallback: true
+  safety_stop_on_critical: true
+
+# Logging settings
+logging:
+  level: "INFO"
+  log_commands: true
+  log_plans: true
+  log_execution: true
+  save_session: false
+  session_log_path: "/tmp/vla_sessions"
+
+# Topic remappings (if needed)
+topic_remapping:
+  perception_objects: "/perception/objects"
+  navigation_goal: "/navigate_to_pose"
+  robot_state: "/robot/state"

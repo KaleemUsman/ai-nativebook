@@ -1,0 +1,149 @@
+<?xml version="1.0"?>
+<!--
+  Humanoid Robot Behavior Tree for Nav2
+  
+  This behavior tree is optimized for bipedal humanoid robot navigation,
+  with specific recovery behaviors suited to humanoid locomotion constraints.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="6" name="NavigateRecovery">
+      <PipelineSequence name="NavigateWithReplanning">
+        
+        <!-- Compute path to goal -->
+        <RecoveryNode number_of_retries="2" name="ComputePathRecovery">
+          <PipelineSequence name="ComputePathSequence">
+            <RateController hz="1.0">
+              <RecoveryNode number_of_retries="1" name="ComputePathToPose">
+                <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+                <!-- If planning fails, clear costmaps and retry -->
+                <Sequence name="ClearAndReplan">
+                  <ClearEntireCostmap name="ClearGlobalCostmap-Context" service_name="global_costmap/clear_entirely_global_costmap"/>
+                  <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+                </Sequence>
+              </RecoveryNode>
+            </RateController>
+          </PipelineSequence>
+          
+          <!-- Recovery: Wait and retry planning -->
+          <Sequence name="PlanningRecoverySequence">
+            <Wait wait_duration="2"/>
+            <ClearEntireCostmap name="ClearGlobalCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
+          </Sequence>
+        </RecoveryNode>
+
+        <!-- Follow the computed path -->
+        <RecoveryNode number_of_retries="2" name="FollowPathRecovery">
+          <PipelineSequence name="FollowPathSequence">
+            
+            <!-- Check if path is still valid periodically -->
+            <RateController hz="0.5">
+              <Fallback name="CheckPathValidity">
+                <GoalUpdated/>
+                <PathExpiringTimer seconds="5.0"/>
+              </Fallback>
+            </RateController>
+            
+            <!-- Main path following with goal checking -->
+            <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="general_goal_checker"/>
+            
+          </PipelineSequence>
+          
+          <!-- Recovery behaviors optimized for humanoid -->
+          <Sequence name="HumanoidRecoverySequence">
+            <ReactiveFallback name="RecoveryFallback">
+              
+              <!-- First: Wait briefly (humanoid stability) -->
+              <Sequence name="WaitRecovery">
+                <Wait wait_duration="3"/>
+                <ClearEntireCostmap name="ClearLocalCostmap1" service_name="local_costmap/clear_entirely_local_costmap"/>
+              </Sequence>
+              
+              <!-- Second: Slow spin (reduced for humanoid balance) -->
+              <Sequence name="SpinRecovery">
+                <Spin spin_dist="0.785"/>  <!-- 45 degrees - conservative for bipedal -->
+                <Wait wait_duration="1"/>
+              </Sequence>
+              
+              <!-- Third: Small backup (conservative for humanoid) -->
+              <Sequence name="BackupRecovery">
+                <BackUp backup_dist="0.10" backup_speed="0.05"/>  <!-- Very slow backup -->
+                <Wait wait_duration="1"/>
+              </Sequence>
+              
+              <!-- Fourth: Clear costmaps and wait -->
+              <Sequence name="ClearCostmapRecovery">
+                <ClearEntireCostmap name="ClearGlobalCostmap2" service_name="global_costmap/clear_entirely_global_costmap"/>
+                <ClearEntireCostmap name="ClearLocalCostmap2" service_name="local_costmap/clear_entirely_local_costmap"/>
+                <Wait wait_duration="5"/>
+              </Sequence>
+              
+            </ReactiveFallback>
+          </Sequence>
+        </RecoveryNode>
+        
+      </PipelineSequence>
+      
+      <!-- Global recovery for navigation failures -->
+      <ReactiveFallback name="GlobalRecoveryFallback">
+        <GoalUpdated/>
+        <RoundRobin name="GlobalRecoveryActions">
+          
+          <!-- Clear all costmaps -->
+          <Sequence name="ClearingRecovery">
+            <ClearEntireCostmap name="ClearGlobalCostmap3" service_name="global_costmap/clear_entirely_global_costmap"/>
+            <ClearEntireCostmap name="ClearLocalCostmap3" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <Wait wait_duration="2"/>
+          </Sequence>
+          
+          <!-- Wait for dynamic obstacles to clear -->
+          <Wait wait_duration="10"/>
+          
+          <!-- Spin in place to survey environment -->
+          <Spin spin_dist="1.57"/>  <!-- 90 degrees -->
+          
+        </RoundRobin>
+      </ReactiveFallback>
+      
+    </RecoveryNode>
+  </BehaviorTree>
+
+  <!-- Subtree for precise goal approach (optional) -->
+  <BehaviorTree ID="PreciseApproach">
+    <Sequence name="PreciseApproachSequence">
+      <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="precise_goal_checker"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- Subtree for waypoint following -->
+  <BehaviorTree ID="FollowWaypoints">
+    <PipelineSequence name="WaypointFollowing">
+      <RecoveryNode number_of_retries="3" name="WaypointRecovery">
+        <PipelineSequence>
+          <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+          <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="general_goal_checker"/>
+        </PipelineSequence>
+        <Wait wait_duration="5"/>
+      </RecoveryNode>
+    </PipelineSequence>
+  </BehaviorTree>
+
+  <!-- Subtree for navigate through poses -->
+  <BehaviorTree ID="NavigateThroughPoses">
+    <RecoveryNode number_of_retries="4" name="NavigateThroughPosesRecovery">
+      <PipelineSequence name="NavigateThroughPosesSequence">
+        <ComputePathThroughPoses goals="{goals}" path="{path}" planner_id="GridBased"/>
+        <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="general_goal_checker"/>
+      </PipelineSequence>
+      <ReactiveFallback name="ThroughPosesRecovery">
+        <GoalUpdated/>
+        <Sequence>
+          <ClearEntireCostmap name="ClearGlobal" service_name="global_costmap/clear_entirely_global_costmap"/>
+          <ClearEntireCostmap name="ClearLocal" service_name="local_costmap/clear_entirely_local_costmap"/>
+          <Wait wait_duration="3"/>
+        </Sequence>
+      </ReactiveFallback>
+    </RecoveryNode>
+  </BehaviorTree>
+
+</root>

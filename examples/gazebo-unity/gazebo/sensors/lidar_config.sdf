@@ -1,0 +1,172 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <model name="humanoid_lidar_sensor">
+    <!-- LiDAR sensor configuration for humanoid robot -->
+    <!-- Positioned on the torso/upper body for 360-degree navigation -->
+    <link name="lidar_link">
+      <pose>0.0 0.0 0.8 0 0 0</pose> <!-- Positioned at torso level -->
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.0001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0001</iyy>
+          <iyz>0</iyz>
+          <izz>0.0001</izz>
+        </inertia>
+      </inertial>
+
+      <!-- LiDAR collision geometry -->
+      <collision name="lidar_collision">
+        <geometry>
+          <cylinder>
+            <radius>0.05</radius>
+            <length>0.08</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <!-- LiDAR visual representation -->
+      <visual name="lidar_visual">
+        <geometry>
+          <cylinder>
+            <radius>0.05</radius>
+            <length>0.08</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5 1</ambient>
+          <diffuse>0.7 0.7 0.7 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+
+      <!-- LiDAR sensor definition -->
+      <sensor name="humanoid_laser" type="ray">
+        <pose>0 0 0 0 0 0</pose>
+        <ray>
+          <scan>
+            <horizontal>
+              <!-- 360-degree horizontal scan -->
+              <samples>720</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159</min_angle> <!-- -π radians = -180 degrees -->
+              <max_angle>3.14159</max_angle>  <!-- π radians = 180 degrees -->
+            </horizontal>
+          </scan>
+          <range>
+            <!-- Range parameters for humanoid navigation -->
+            <min>0.1</min>    <!-- Minimum detectable range (m) -->
+            <max>10.0</max>   <!-- Maximum detectable range (m) -->
+            <resolution>0.01</resolution> <!-- Resolution of range measurements (m) -->
+          </range>
+        </ray>
+        <always_on>true</always_on>
+        <update_rate>10</update_rate> <!-- 10 Hz update rate appropriate for navigation -->
+        <plugin name="lidar_controller" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <namespace>/humanoid</namespace>
+            <remapping>~/out:=scan</remapping>
+          </ros>
+          <output_type>sensor_msgs/LaserScan</output_type>
+          <frame_name>lidar_link</frame_name>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- Alternative LiDAR configuration for head-mounted sensor -->
+    <link name="head_lidar_link">
+      <pose>0.0 0.0 1.6 0 0 0</pose> <!-- Positioned at head level -->
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.0001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0001</iyy>
+          <iyz>0</iyz>
+          <izz>0.0001</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Head-mounted LiDAR collision geometry -->
+      <collision name="head_lidar_collision">
+        <geometry>
+          <cylinder>
+            <radius>0.03</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <!-- Head-mounted LiDAR visual representation -->
+      <visual name="head_lidar_visual">
+        <geometry>
+          <cylinder>
+            <radius>0.03</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5 1</ambient>
+          <diffuse>0.7 0.7 0.7 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+
+      <!-- Head-mounted LiDAR sensor definition -->
+      <sensor name="head_laser" type="ray">
+        <pose>0 0 0 0 0 0</pose>
+        <ray>
+          <scan>
+            <horizontal>
+              <!-- 360-degree horizontal scan -->
+              <samples>360</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159</min_angle> <!-- -π radians = -180 degrees -->
+              <max_angle>3.14159</max_angle>  <!-- π radians = 180 degrees -->
+            </horizontal>
+            <vertical>
+              <!-- 20-degree vertical field of view for head-mounted sensor -->
+              <samples>1</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.1745</min_angle> <!-- -10 degrees in radians -->
+              <max_angle>0.1745</max_angle>  <!-- 10 degrees in radians -->
+            </vertical>
+          </scan>
+          <range>
+            <!-- Range parameters for head-mounted sensor -->
+            <min>0.1</min>    <!-- Minimum detectable range (m) -->
+            <max>15.0</max>   <!-- Maximum detectable range (m) -->
+            <resolution>0.01</resolution> <!-- Resolution of range measurements (m) -->
+          </range>
+        </ray>
+        <always_on>true</always_on>
+        <update_rate>5</update_rate> <!-- 5 Hz update rate for head sensor -->
+        <plugin name="head_lidar_controller" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <namespace>/humanoid</namespace>
+            <remapping>~/out:=head_scan</remapping>
+          </ros>
+          <output_type>sensor_msgs/LaserScan</output_type>
+          <frame_name>head_lidar_link</frame_name>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- Joint to connect LiDAR to the robot (example connection to torso) -->
+    <joint name="lidar_to_torso" type="fixed">
+      <parent>torso_link</parent> <!-- This would connect to actual torso link in full robot model -->
+      <child>lidar_link</child>
+      <pose>0.1 0 0 0 0 0</pose> <!-- Offset slightly forward on torso -->
+    </joint>
+
+    <!-- Joint to connect head LiDAR to the robot -->
+    <joint name="head_lidar_to_head" type="fixed">
+      <parent>head_link</parent> <!-- This would connect to actual head link in full robot model -->
+      <child>head_lidar_link</child>
+      <pose>0.05 0 0 0 0 0</pose> <!-- Offset slightly forward on head -->
+    </joint>
+  </model>
+</sdf>

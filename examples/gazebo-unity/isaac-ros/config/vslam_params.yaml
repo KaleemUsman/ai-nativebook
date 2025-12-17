@@ -1,0 +1,71 @@
+# VSLAM Configuration for Humanoid Robot
+# Visual-inertial SLAM parameters optimized for humanoid perception
+
+/**:
+  ros__parameters:
+    # Input topics
+    image_topic: "/camera/rgb/image_rect_color"
+    camera_info_topic: "/camera/rgb/camera_info"
+    imu_topic: "/imu/data"
+
+    # Processing parameters
+    enable_rectification: true
+    enable_fisheye_rectification: false
+    enable_stereo_rectification: false
+
+    # Feature detection parameters
+    feature_detector:
+      max_features: 1000
+      min_distance: 10
+      quality_level: 0.01
+      pyramid_levels: 4
+      patch_size: 21
+      fast_threshold: 20
+
+    # Tracking parameters
+    tracker:
+      max_level: 4
+      min_eig_threshold: 0.0001
+      max_iterations: 30
+      epsilon: 0.01
+
+    # Visual-inertial fusion
+    visual_inertial:
+      enable_imu_integration: true
+      imu_noise_density: 0.001
+      imu_random_walk: 0.0001
+      gravity: 9.81
+      imu_queue_size: 100
+
+    # Optimization parameters
+    optimizer:
+      max_iterations: 15
+      convergence_threshold: 1e-6
+      trust_region_radius_init: 1.0
+      use_gpu: true
+
+    # Map management
+    map:
+      max_keyframes: 1000
+      keyframe_selection_threshold: 0.1
+      local_ba_frames: 15
+      enable_loop_closure: true
+      loop_closure_min_score: 0.5
+
+    # Output configuration
+    output:
+      pose_topic: "/visual_slam/pose"
+      trajectory_topic: "/visual_slam/trajectory"
+      map_topic: "/visual_slam/map"
+      publish_rate: 30.0
+      publish_tf: true
+      odom_frame: "odom"
+      base_frame: "base_link"
+
+    # Debug parameters
+    debug:
+      enable_detailed_logging: false
+      enable_visualization: true
+      visualization_rate: 10.0
+      publish_debug_topics: true
+      debug_image_topic: "/visual_slam/debug_image"

@@ -1,0 +1,258 @@
+# Nav2 Humanoid Navigation Parameters
+# Optimized configuration for bipedal humanoid robot locomotion
+
+# General Nav2 parameters
+nav2:
+  ros__parameters:
+    use_sim_time: true
+    autostart: true
+    node_names:
+      - 'controller_server'
+      - 'planner_server'
+      - 'behavior_server'
+      - 'bt_navigator'
+      - 'waypoint_follower'
+      - 'velocity_smoother'
+
+# Humanoid-specific parameters
+humanoid:
+  ros__parameters:
+    # Robot physical properties
+    robot_radius: 0.30           # Approximate humanoid footprint radius
+    robot_height: 1.70           # Humanoid height for 3D planning
+    center_of_mass_height: 0.85  # CoM height for stability calculations
+    
+    # Bipedal locomotion constraints
+    bipedal_constraints:
+      max_step_length: 0.30      # Maximum step length in meters
+      max_step_width: 0.20       # Maximum lateral step width
+      max_step_height: 0.15      # Maximum step-up height
+      min_step_time: 0.4         # Minimum time per step (seconds)
+      max_step_time: 1.2         # Maximum time per step
+      
+    # Balance constraints
+    balance:
+      max_lean_angle: 0.15       # Maximum body lean angle (radians)
+      min_stability_margin: 0.05 # Minimum stability margin (meters)
+      support_polygon_margin: 0.02
+      
+    # Terrain constraints
+    terrain:
+      max_slope_angle: 0.26      # ~15 degrees max slope
+      max_roughness: 0.05        # Maximum terrain roughness tolerance
+      min_friction_coefficient: 0.4
+
+# Controller server for humanoid
+controller_server:
+  ros__parameters:
+    use_sim_time: true
+    controller_frequency: 20.0
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["general_goal_checker", "precise_goal_checker"]
+    controller_plugins: ["FollowPath"]
+    
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.3
+      movement_time_allowance: 15.0
+    
+    general_goal_checker:
+      stateful: true
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.25
+      yaw_goal_tolerance: 0.25
+    
+    precise_goal_checker:
+      stateful: true
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.10
+      yaw_goal_tolerance: 0.10
+    
+    # MPPI Controller optimized for humanoid
+    FollowPath:
+      plugin: "nav2_mppi_controller::MPPIController"
+      time_steps: 56
+      model_dt: 0.05
+      batch_size: 2000
+      vx_std: 0.2
+      vy_std: 0.05
+      wz_std: 0.25
+      
+      # Humanoid velocity limits (conservative)
+      vx_max: 0.4          # Max forward velocity (m/s)
+      vx_min: -0.15        # Max reverse velocity
+      vy_max: 0.05         # Limited lateral velocity for bipedal
+      wz_max: 0.4          # Max rotation velocity (rad/s)
+      
+      iteration_count: 1
+      prune_distance: 1.7
+      transform_tolerance: 0.1
+      temperature: 0.3
+      gamma: 0.015
+      motion_model: "DiffDrive"  # Use differential drive model
+      visualize: true
+      
+      # Cost critics for humanoid navigation
+      critics: ["ConstraintCritic", "ObstaclesCritic", "GoalCritic", 
+                "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic",
+                "PathAngleCritic", "PreferForwardCritic"]
+      
+      ConstraintCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 4.0
+      
+      ObstaclesCritic:
+        enabled: true
+        cost_power: 1
+        repulsion_weight: 1.5
+        critical_weight: 20.0
+        consider_footprint: true
+        collision_cost: 10000.0
+        collision_margin_distance: 0.1
+        near_goal_distance: 0.5
+        inflation_radius: 0.55
+        cost_scaling_factor: 3.0
+      
+      GoalCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+        threshold_to_consider: 1.4
+      
+      GoalAngleCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 3.0
+        threshold_to_consider: 0.5
+      
+      PathAlignCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 14.0
+        max_path_occupancy_ratio: 0.05
+        trajectory_point_step: 3
+        threshold_to_consider: 0.5
+        offset_from_furthest: 20
+        use_path_orientations: false
+      
+      PathFollowCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+        offset_from_furthest: 5
+        threshold_to_consider: 1.4
+      
+      PathAngleCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 2.0
+        offset_from_furthest: 4
+        threshold_to_consider: 0.5
+        max_angle_to_furthest: 1.0
+        mode: 0
+      
+      PreferForwardCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
+        threshold_to_consider: 0.5
+
+# Planner server for humanoid path planning
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 1.0
+    use_sim_time: true
+    planner_plugins: ["GridBased"]
+    
+    GridBased:
+      plugin: "nav2_smac_planner::SmacPlannerHybrid"
+      downsample_costmap: false
+      downsampling_factor: 1
+      tolerance: 0.25
+      allow_unknown: true
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 5.0
+      motion_model_for_search: "DUBIN"
+      angle_quantization_bins: 72
+      analytic_expansion_ratio: 3.5
+      analytic_expansion_max_length: 3.0
+      analytic_expansion_max_cost: 200.0
+      analytic_expansion_max_cost_override: false
+      minimum_turning_radius: 0.40  # Humanoid can turn in place
+      reverse_penalty: 2.0
+      change_penalty: 0.0
+      non_straight_penalty: 1.2
+      cost_penalty: 2.0
+      retrospective_penalty: 0.015
+      lookup_table_size: 20.0
+      cache_obstacle_heuristic: false
+      debug_visualizations: false
+      use_quadratic_cost_penalty: false
+      downsample_obstacle_heuristic: true
+      allow_primitive_interpolation: false
+
+# Behavior server for recovery behaviors
+behavior_server:
+  ros__parameters:
+    use_sim_time: true
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_footprint_topic: global_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]
+    
+    spin:
+      plugin: "nav2_behaviors::Spin"
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+    drive_on_heading:
+      plugin: "nav2_behaviors::DriveOnHeading"
+    wait:
+      plugin: "nav2_behaviors::Wait"
+    assisted_teleop:
+      plugin: "nav2_behaviors::AssistedTeleop"
+    
+    local_frame: odom
+    global_frame: map
+    robot_base_frame: base_link
+    transform_tolerance: 0.1
+    simulate_ahead_time: 2.0
+    max_rotational_vel: 0.4
+    min_rotational_vel: 0.1
+    rotational_acc_lim: 1.6
+
+# Waypoint follower
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: true
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: true
+      waypoint_pause_duration: 200
+
+# Velocity smoother for humanoid
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: true
+    smoothing_frequency: 20.0
+    scale_velocities: false
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.4, 0.0, 0.4]        # Humanoid limits
+    min_velocity: [-0.15, 0.0, -0.4]
+    max_accel: [1.5, 0.0, 2.0]           # Conservative acceleration
+    max_decel: [-2.5, 0.0, -2.0]
+    odom_topic: "odom"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0

@@ -1,0 +1,132 @@
+# VLA Whisper Configuration
+# Audio capture, transcription, and command parsing settings
+
+audio:
+  # Microphone configuration
+  device_id: null  # null = use default microphone
+  sample_rate: 16000  # Hz - Whisper expects 16kHz
+  channels: 1  # Mono audio
+  chunk_duration_ms: 100  # Duration of each audio chunk
+  buffer_size_ms: 30000  # Maximum buffer size (30 seconds)
+  
+  # Voice Activity Detection (VAD)
+  vad:
+    enabled: true
+    energy_threshold: -40  # dB - below this is considered silence
+    speech_pad_ms: 300  # Padding around detected speech
+    min_speech_duration_ms: 500  # Minimum speech length to process
+    max_speech_duration_ms: 15000  # Maximum speech length (15 seconds)
+    silence_duration_ms: 700  # Silence duration to end utterance
+
+whisper:
+  # Model configuration
+  model_size: "small"  # Options: tiny, base, small, medium, large-v3
+  language: "en"  # Target language (null for auto-detect)
+  task: "transcribe"  # transcribe or translate
+  
+  # Processing settings
+  local_model: true  # true = local model, false = OpenAI API
+  device: "cuda"  # cuda, cpu, or auto
+  compute_type: "float16"  # float16, float32, int8
+  
+  # Transcription parameters
+  temperature: 0.0  # Lower = more deterministic
+  best_of: 5  # Number of candidates for beam search
+  beam_size: 5  # Beam search width
+  patience: 1.0  # Beam search patience factor
+  
+  # Output settings
+  word_timestamps: false  # Include per-word timing
+  condition_on_previous_text: true  # Use previous transcription as context
+  
+  # Confidence threshold
+  no_speech_threshold: 0.6  # Probability threshold for no speech
+  logprob_threshold: -1.0  # Log probability threshold
+  compression_ratio_threshold: 2.4  # Compression ratio threshold
+
+parser:
+  # Command parsing configuration
+  confidence_threshold: 0.5  # Minimum confidence to process command
+  
+  # Intent classification
+  intent_patterns:
+    navigation:
+      - "go to"
+      - "navigate to"
+      - "move to"
+      - "walk to"
+      - "head to"
+      - "travel to"
+    manipulation:
+      - "pick up"
+      - "grab"
+      - "take"
+      - "put"
+      - "place"
+      - "drop"
+      - "move"
+      - "bring"
+      - "fetch"
+      - "get"
+    query:
+      - "where is"
+      - "find"
+      - "locate"
+      - "search for"
+      - "look for"
+      - "what is"
+      - "tell me"
+    cancel:
+      - "stop"
+      - "cancel"
+      - "abort"
+      - "halt"
+      - "nevermind"
+
+  # Location aliases (map spoken names to semantic locations)
+  location_aliases:
+    kitchen: ["kitchen", "cooking area", "food area"]
+    living_room: ["living room", "lounge", "sitting room"]
+    bedroom: ["bedroom", "sleeping room", "bed"]
+    bathroom: ["bathroom", "restroom", "toilet"]
+    office: ["office", "study", "work room", "desk area"]
+    garage: ["garage", "car park"]
+    entrance: ["entrance", "front door", "doorway", "entry"]
+    table: ["table", "dining table", "desk"]
+    shelf: ["shelf", "bookshelf", "shelves"]
+
+  # Object aliases
+  object_aliases:
+    cup: ["cup", "mug", "glass"]
+    phone: ["phone", "mobile", "cellphone", "smartphone"]
+    book: ["book", "novel", "textbook"]
+    keys: ["keys", "key", "keychain"]
+    bottle: ["bottle", "water bottle"]
+    remote: ["remote", "remote control", "tv remote"]
+
+  # Error handling
+  unknown_intent_handling: "ask_clarification"  # ask_clarification, ignore, default_to_query
+  max_clarification_attempts: 2
+
+ros:
+  # ROS 2 topic configuration
+  topics:
+    audio_input: "/audio/raw"
+    audio_chunk: "/vla/audio_chunk"
+    transcription: "/vla/transcription"
+    parsed_intent: "/vla/parsed_intent"
+    whisper_status: "/vla/whisper_status"
+    audio_level: "/vla/audio_level"
+  
+  # QoS settings
+  qos:
+    reliability: "reliable"
+    durability: "volatile"
+    history_depth: 10
+
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  log_transcriptions: true
+  log_audio_levels: false
+  save_audio_files: false  # Save processed audio for debugging
+  audio_save_path: "/tmp/vla_audio"
