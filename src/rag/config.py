@@ -12,7 +12,7 @@ from functools import lru_cache
 
 class QdrantConfig(BaseModel):
     """Qdrant vector database configuration."""
-    url: str = Field(default="http://localhost:6333", description="Qdrant server URL")
+    url: str = Field(default=":memory:", description="Qdrant storage (url or :memory: or /path/to/db)")
     api_key: Optional[str] = Field(default=None, description="Qdrant API key (for cloud)")
     collection_name: str = Field(default="ai-native-book", description="Collection name")
     vector_size: int = Field(default=1536, description="Vector dimensions (ada-002)")
@@ -39,7 +39,7 @@ class ChunkingConfig(BaseModel):
 class RetrievalConfig(BaseModel):
     """Retrieval configuration."""
     top_k: int = Field(default=5, description="Number of results to retrieve")
-    score_threshold: float = Field(default=0.7, description="Minimum similarity score")
+    score_threshold: float = Field(default=-1.0, description="Minimum similarity score")
     max_context_tokens: int = Field(default=3000, description="Max tokens for context")
 
 
@@ -55,7 +55,7 @@ class RAGConfig(BaseModel):
         """Create config from environment variables."""
         return cls(
             qdrant=QdrantConfig(
-                url=os.getenv("QDRANT_URL", "http://localhost:6333"),
+                url=os.getenv("QDRANT_URL", "./qdrant_db"),
                 api_key=os.getenv("QDRANT_API_KEY"),
                 collection_name=os.getenv("QDRANT_COLLECTION", "ai-native-book"),
             ),

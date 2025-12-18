@@ -57,10 +57,15 @@ class VectorStore:
         self.vector_size = self.config.qdrant.vector_size
         
         if QDRANT_AVAILABLE:
-            self.client = QdrantClient(
-                url=self.config.qdrant.url,
-                api_key=self.config.qdrant.api_key,
-            )
+            url = self.config.qdrant.url
+            if url.startswith("http://") or url.startswith("https://"):
+                self.client = QdrantClient(
+                    url=url,
+                    api_key=self.config.qdrant.api_key,
+                )
+            else:
+                 # Local path or :memory:
+                 self.client = QdrantClient(path=url)
         else:
             self.client = None
             self._mock_store: Dict[str, Document] = {}
@@ -197,13 +202,12 @@ class VectorStore:
             query_filter = Filter(must=conditions) if conditions else None
         
         try:
-            results = self.client.search(
+            results = self.client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_embedding,
+                query=query_embedding,
                 limit=top_k,
-                score_threshold=score_threshold,
-                query_filter=query_filter,
-            )
+                score_threshold=score_threshold if score_threshold > 0 else None,
+            ).points
             
             return [
                 Document(

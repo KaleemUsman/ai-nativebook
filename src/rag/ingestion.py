@@ -5,7 +5,6 @@ Processes MDX documentation files and ingests them into the vector store.
 """
 
 import os
-import re
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Generator
 from dataclasses import dataclass
@@ -33,14 +32,11 @@ class MDXParser:
     """
     Parser for MDX documentation files.
     
-    Extracts content and metadata from MDX files.
+    Extracts content and metadata from MDX files without regex.
     """
     
     def __init__(self):
-        self.code_block_pattern = re.compile(r'```[\s\S]*?```', re.MULTILINE)
-        self.html_tag_pattern = re.compile(r'<[^>]+>')
-        self.link_pattern = re.compile(r'\[([^\]]+)\]\([^\)]+\)')
-        self.heading_pattern = re.compile(r'^#+\s+(.+)$', re.MULTILINE)
+        pass  # No regex patterns needed
     
     def parse_file(self, file_path: Path) -> tuple[str, Dict[str, Any]]:
         """
@@ -67,7 +63,7 @@ class MDXParser:
             except Exception:
                 pass
         else:
-            # Simple frontmatter extraction
+            # Simple frontmatter extraction without regex
             if raw_content.startswith('---'):
                 parts = raw_content.split('---', 2)
                 if len(parts) >= 3:
@@ -88,7 +84,7 @@ class MDXParser:
     
     def clean_content(self, content: str) -> str:
         """
-        Clean MDX content for embedding.
+        Clean MDX content for embedding without regex.
         
         Args:
             content: Raw MDX content
@@ -96,39 +92,69 @@ class MDXParser:
         Returns:
             Cleaned plain text
         """
-        # Remove code blocks (keep them but simplify)
-        def replace_code_block(match):
-            code = match.group(0)
-            # Extract language and code
-            lines = code.split('\n')
-            if len(lines) > 2:
-                return f"\n[Code example]\n"
-            return code
+        text = content
         
-        text = self.code_block_pattern.sub(replace_code_block, content)
+        # Remove code blocks (find ``` pairs and replace)
+        while '```' in text:
+            start = text.find('```')
+            if start == -1:
+                break
+            end = text.find('```', start + 3)
+            if end == -1:
+                break
+            text = text[:start] + '\n[Code example]\n' + text[end + 3:]
         
-        # Remove HTML-like JSX tags
-        text = self.html_tag_pattern.sub('', text)
+        # Remove HTML-like JSX tags (simple approach)
+        result = []
+        in_tag = False
+        for char in text:
+            if char == '<':
+                in_tag = True
+            elif char == '>':
+                in_tag = False
+            elif not in_tag:
+                result.append(char)
+        text = ''.join(result)
         
         # Simplify links: [text](url) -> text
-        text = self.link_pattern.sub(r'\1', text)
+        while '[' in text and '](' in text:
+            start = text.find('[')
+            mid = text.find('](', start)
+            end = text.find(')', mid)
+            if start == -1 or mid == -1 or end == -1:
+                break
+            link_text = text[start + 1:mid]
+            text = text[:start] + link_text + text[end + 1:]
         
-        # Clean up whitespace
-        text = re.sub(r'\n{3,}', '\n\n', text)
-        text = text.strip()
+        # Clean up excess whitespace
+        lines = text.split('\n')
+        cleaned_lines = []
+        blank_count = 0
+        for line in lines:
+            if line.strip() == '':
+                blank_count += 1
+                if blank_count <= 2:
+                    cleaned_lines.append('')
+            else:
+                blank_count = 0
+                cleaned_lines.append(line)
         
-        return text
+        return '\n'.join(cleaned_lines).strip()
     
     def extract_title(self, content: str, metadata: Dict) -> str:
-        """Extract title from content or metadata."""
+        """Extract title from content or metadata without regex."""
         # Try metadata first
         if 'title' in metadata:
             return metadata['title']
         
-        # Try first heading
-        match = self.heading_pattern.search(content)
-        if match:
-            return match.group(1).strip()
+        # Try first heading (look for lines starting with #)
+        for line in content.split('\n'):
+            line = line.strip()
+            if line.startswith('#'):
+                # Remove # symbols and whitespace
+                title = line.lstrip('#').strip()
+                if title:
+                    return title
         
         return metadata.get('filename', 'Untitled')
 
@@ -158,8 +184,19 @@ class Chunker:
         if not text.strip():
             return []
         
-        # Split by paragraphs first
-        paragraphs = re.split(r'\n\n+', text)
+        # Split by paragraphs (double newlines) without regex
+        paragraphs = []
+        current_para = []
+        lines = text.split('\n')
+        for line in lines:
+            if line.strip() == '':
+                if current_para:
+                    paragraphs.append('\n'.join(current_para))
+                    current_para = []
+            else:
+                current_para.append(line)
+        if current_para:
+            paragraphs.append('\n'.join(current_para))
         
         chunks = []
         current_chunk = []

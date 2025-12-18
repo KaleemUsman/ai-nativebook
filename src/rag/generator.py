@@ -18,7 +18,7 @@ from .retriever import Retriever, get_retriever, RetrievalResult
 from .vectorstore import Document
 
 
-SYSTEM_PROMPT = """You are a helpful AI assistant for the AI-Native Book on Physical AI & Humanoid Robotics.
+SYSTEM_PROMPT_TEMPLATE = """You are a helpful AI assistant for the AI-Native Book on Physical AI & Humanoid Robotics.
 
 Your role is to answer questions ONLY based on the provided documentation context. Follow these rules strictly:
 
@@ -26,11 +26,39 @@ Your role is to answer questions ONLY based on the provided documentation contex
 2. **Cite sources**: Reference the source documents when providing information (e.g., "According to the ROS 2 Architecture guide...").
 3. **Be accurate**: If the context doesn't contain enough information to answer the question, say "I don't have information about that in the documentation."
 4. **Be helpful**: Provide clear, concise answers. Include relevant code examples if they appear in the context.
-5. **Stay on topic**: The documentation covers ROS 2, Gazebo/Unity simulation, Isaac AI, and Vision-Language-Action modules.
+5. **Stay on topic**: The documentation covers {module_list}.
 
 If asked about topics not covered in the documentation (like current events, personal opinions, or unrelated subjects), politely explain that you can only answer questions about the book content.
 
 Remember: It's better to say "I don't know" than to make up information."""
+
+
+NO_INFO_TEMPLATE = "I don't have information about that in the documentation. Could you try rephrasing your question or ask about {module_list}?"
+
+
+def get_available_modules(vector_store) -> List[str]:
+    """Discover available modules from the vector store metadata."""
+    try:
+        # Query a sample of documents to extract module names
+        from .embeddings import get_embedding_client
+        client = get_embedding_client()
+        sample_query = client.embed("module documentation")
+        
+        docs = vector_store.search(
+            query_embedding=sample_query,
+            top_k=50,
+            score_threshold=-1.0
+        )
+        
+        modules = set()
+        for doc in docs:
+            module = doc.metadata.get('module', '')
+            if module:
+                modules.add(module.replace('-', ' ').title())
+        
+        return sorted(list(modules)) if modules else ["the documentation"]
+    except Exception:
+        return ["the documentation"]
 
 
 @dataclass
@@ -52,6 +80,7 @@ class Generator:
     - Source citation
     - "I don't know" handling
     - Context injection
+    - Dynamic module discovery
     """
     
     def __init__(
@@ -77,6 +106,33 @@ class Generator:
         self.model = self.config.openai.completion_model
         self.temperature = self.config.openai.temperature
         self.max_tokens = self.config.openai.max_tokens
+        
+        # Discover available modules dynamically
+        self._modules = None
+    
+    @property
+    def modules(self) -> List[str]:
+        """Get available modules (lazy-loaded)."""
+        if self._modules is None:
+            from .vectorstore import get_vector_store
+            self._modules = get_available_modules(get_vector_store(self.config))
+        return self._modules
+    
+    @property
+    def module_list_str(self) -> str:
+        """Get formatted module list string."""
+        if len(self.modules) <= 1:
+            return self.modules[0] if self.modules else "the documentation"
+        return ", ".join(self.modules[:-1]) + ", or " + self.modules[-1]
+    
+    @property
+    def system_prompt(self) -> str:
+        """Get the system prompt with dynamic modules."""
+        return SYSTEM_PROMPT_TEMPLATE.format(module_list=self.module_list_str)
+    
+    def get_no_info_message(self) -> str:
+        """Get the 'no information' message with dynamic modules."""
+        return NO_INFO_TEMPLATE.format(module_list=self.module_list_str)
     
     def generate(
         self,
@@ -101,10 +157,9 @@ class Generator:
         
         documents = retrieval_result.documents
         
-        # Check if we have relevant context
         if not documents:
             return GenerationResult(
-                answer="I don't have information about that in the documentation. Could you try rephrasing your question or ask about ROS 2, simulation, Isaac AI, or the VLA module?",
+                answer=self.get_no_info_message(),
                 sources=[],
                 context_used="",
                 model=self.model,
@@ -115,8 +170,8 @@ class Generator:
         context = self.retriever.format_context(documents)
         sources = self.retriever.get_sources(documents)
         
-        # Build messages
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        # Build messages with dynamic system prompt
+        messages = [{"role": "system", "content": self.system_prompt}]
         
         # Add conversation history if provided
         if conversation_history:
