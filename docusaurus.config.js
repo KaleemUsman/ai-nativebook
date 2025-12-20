@@ -29,6 +29,11 @@ const config = {
     locales: ['en'],
   },
 
+  // Custom fields for chatbot API configuration
+  customFields: {
+    chatbotApiUrl: process.env.CHATBOT_API_URL || 'http://localhost:8000',
+  },
+
   presets: [
     [
       'classic',

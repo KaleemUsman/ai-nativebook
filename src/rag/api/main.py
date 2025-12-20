@@ -30,6 +30,10 @@ app.add_middleware(
         "http://localhost:8000",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:8000",
+        "https://kaleemusman-ai-nativebook.hf.space",  # HF Spaces
+        "https://huggingface.co",
+        "https://*.hf.space",
+        "*",  # Allow all origins for production API
     ],
     allow_credentials=True,
     allow_methods=["*"],

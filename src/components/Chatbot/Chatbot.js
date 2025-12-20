@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import styles from './Chatbot.module.css';
 
 const MAX_HISTORY = 100; // Limit local history
@@ -20,6 +21,9 @@ const SourceLink = ({ source }) => {
 };
 
 export default function Chatbot() {
+    const { siteConfig } = useDocusaurusContext();
+    const apiUrl = siteConfig.customFields?.chatbotApiUrl || 'http://localhost:8000';
+
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
         {
@@ -57,7 +61,7 @@ export default function Chatbot() {
         setMessages(prev => [...prev, { role: 'user', content: question }]);
 
         try {
-            const response = await fetch('http://localhost:8000/api/chat', {
+            const response = await fetch(`${apiUrl}/api/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -93,7 +97,7 @@ export default function Chatbot() {
                 ...prev,
                 {
                     role: 'assistant',
-                    content: 'Sorry, I encountered an error connecting to the server. Please ensure the backend (uvicorn) is running.',
+                    content: 'Sorry, the chatbot backend is currently offline. The AI assistant requires a running backend server.',
                     isError: true
                 }
             ]);
