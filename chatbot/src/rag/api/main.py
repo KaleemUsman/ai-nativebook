@@ -31,7 +31,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
+    allow_origins=os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else [
         "http://localhost:3000",  # Docusaurus dev server
         "http://localhost:8000",
         "http://127.0.0.1:3000",
@@ -39,7 +39,7 @@ app.add_middleware(
         "https://kaleemusman-ai-nativebook.hf.space",  # HF Spaces
         "https://huggingface.co",
         "https://*.hf.space",
-        "*",  # Allow all origins for production API
+        "*",  # Default fallback
     ],
     allow_credentials=True,
     allow_methods=["*"],
