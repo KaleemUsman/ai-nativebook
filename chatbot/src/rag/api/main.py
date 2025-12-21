@@ -14,9 +14,41 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import time
+from contextlib import asynccontextmanager
 
 from src.rag.api.routes import router
 from src.rag.api.models import ErrorResponse
+
+
+# Lifespan context manager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events."""
+    # Startup
+    from ..config import get_config
+    from ..vectorstore import get_vector_store
+    
+    print("🚀 Starting RAG Chatbot API...")
+    
+    # Verify configuration
+    config = get_config()
+    if not config.openai.api_key and not config.huggingface.api_key:
+        print("⚠️  Warning: Neither OPENAI_API_KEY nor HF_TOKEN set. Using mock responses.")
+    
+    # Initialize vector store
+    try:
+        store = get_vector_store()
+        count = store.count()
+        print(f"📚 Connected to Qdrant. Documents: {count}")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not connect to Qdrant: {e}")
+    
+    print("✅ RAG Chatbot API ready!")
+    
+    yield
+    
+    # Shutdown
+    print("👋 Shutting down RAG Chatbot API...")
 
 
 # Create FastAPI app
@@ -26,6 +58,7 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Configure CORS
@@ -98,38 +131,6 @@ async def root():
         "health": "/api/health",
         "chat": "/api/chat"
     }
-
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup."""
-    from ..config import get_config
-    from ..vectorstore import get_vector_store
-    
-    print("🚀 Starting RAG Chatbot API...")
-    
-    # Verify configuration
-    config = get_config()
-    if not config.openai.api_key and not config.huggingface.api_key:
-        print("âš ï¸  Warning: Neither OPENAI_API_KEY nor HF_TOKEN set. Using mock responses.")
-    
-    # Initialize vector store
-    try:
-        store = get_vector_store()
-        count = store.count()
-        print(f"📚 Connected to Qdrant. Documents: {count}")
-    except Exception as e:
-        print(f"⚠️  Warning: Could not connect to Qdrant: {e}")
-    
-    print("✅ RAG Chatbot API ready!")
-
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown."""
-    print("👋 Shutting down RAG Chatbot API...")
 
 
 if __name__ == "__main__":
