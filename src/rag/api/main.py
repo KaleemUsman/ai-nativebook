@@ -105,8 +105,8 @@ async def startup_event():
     
     # Verify configuration
     config = get_config()
-    if not config.openai.api_key:
-        print("⚠️  Warning: OPENAI_API_KEY not set. Using mock responses.")
+    if not config.openai.api_key and not config.huggingface.api_key:
+        print("âš ï¸  Warning: Neither OPENAI_API_KEY nor HF_TOKEN set. Using mock responses.")
     
     # Initialize vector store
     try:

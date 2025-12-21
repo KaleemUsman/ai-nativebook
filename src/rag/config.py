@@ -9,6 +9,13 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from functools import lru_cache
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 
 class QdrantConfig(BaseModel):
     """Qdrant vector database configuration."""
@@ -24,6 +31,15 @@ class OpenAIConfig(BaseModel):
     api_key: str = Field(default="", description="OpenAI API key")
     embedding_model: str = Field(default="text-embedding-ada-002", description="Embedding model")
     completion_model: str = Field(default="gpt-3.5-turbo", description="Completion model")
+    temperature: float = Field(default=0.1, description="Generation temperature")
+    max_tokens: int = Field(default=1024, description="Max response tokens")
+    timeout: float = Field(default=30.0, description="API timeout in seconds")
+
+
+class HuggingFaceConfig(BaseModel):
+    """Hugging Face API configuration."""
+    api_key: str = Field(default="", description="Hugging Face API token")
+    model: str = Field(default="microsoft/DialoGPT-medium", description="Hugging Face model for chat")
     temperature: float = Field(default=0.1, description="Generation temperature")
     max_tokens: int = Field(default=1024, description="Max response tokens")
     timeout: float = Field(default=30.0, description="API timeout in seconds")
@@ -47,6 +63,7 @@ class RAGConfig(BaseModel):
     """Complete RAG configuration."""
     qdrant: QdrantConfig = Field(default_factory=QdrantConfig)
     openai: OpenAIConfig = Field(default_factory=OpenAIConfig)
+    huggingface: HuggingFaceConfig = Field(default_factory=HuggingFaceConfig)
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     
@@ -63,6 +80,10 @@ class RAGConfig(BaseModel):
                 api_key=os.getenv("OPENAI_API_KEY", ""),
                 embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-ada-002"),
                 completion_model=os.getenv("OPENAI_COMPLETION_MODEL", "gpt-3.5-turbo"),
+            ),
+            huggingface=HuggingFaceConfig(
+                api_key=os.getenv("HF_TOKEN", ""),
+                model=os.getenv("HF_MODEL", "microsoft/DialoGPT-medium"),
             ),
         )
 

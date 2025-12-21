@@ -13,6 +13,12 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
+try:
+    from huggingface_hub import InferenceClient
+    HF_AVAILABLE = True
+except ImportError:
+    HF_AVAILABLE = False
+
 from .config import get_config, RAGConfig
 from .retriever import Retriever, get_retriever, RetrievalResult
 from .vectorstore import Document
@@ -98,17 +104,31 @@ class Generator:
         self.config = config or get_config()
         self.retriever = retriever or get_retriever(self.config)
         
+        # Initialize OpenAI client
         if OPENAI_AVAILABLE and self.config.openai.api_key:
-            self.client = OpenAI(api_key=self.config.openai.api_key)
+            self.openai_client = OpenAI(api_key=self.config.openai.api_key)
         else:
-            self.client = None
-        
-        self.model = self.config.openai.completion_model
-        self.temperature = self.config.openai.temperature
-        self.max_tokens = self.config.openai.max_tokens
-        
-        # Discover available modules dynamically
-        self._modules = None
+            self.openai_client = None
+
+        # Initialize Hugging Face client
+        if HF_AVAILABLE and self.config.huggingface.api_key:
+            self.hf_client = InferenceClient(token=self.config.huggingface.api_key)
+        else:
+            self.hf_client = None
+
+        # Determine which model to use (prefer OpenAI if available, else HF)
+        if self.openai_client:
+            self.model = self.config.openai.completion_model
+            self.temperature = self.config.openai.temperature
+            self.max_tokens = self.config.openai.max_tokens
+        elif self.hf_client:
+            self.model = self.config.huggingface.model
+            self.temperature = self.config.huggingface.temperature
+            self.max_tokens = self.config.huggingface.max_tokens
+        else:
+            self.model = "mock"
+            self.temperature = 0.1
+            self.max_tokens = 1024
     
     @property
     def modules(self) -> List[str]:
@@ -192,8 +212,10 @@ Please provide a helpful, accurate answer based only on the documentation above.
         messages.append({"role": "user", "content": user_message})
         
         # Generate response
-        if self.client:
+        if self.openai_client:
             answer = self._generate_with_openai(messages)
+        elif self.hf_client:
+            answer = self._generate_with_hf(messages)
         else:
             answer = self._generate_mock(question, documents)
         
@@ -211,7 +233,7 @@ Please provide a helpful, accurate answer based only on the documentation above.
     def _generate_with_openai(self, messages: List[Dict[str, str]]) -> str:
         """Generate answer using OpenAI API."""
         try:
-            response = self.client.chat.completions.create(
+            response = self.openai_client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=self.temperature,
@@ -220,6 +242,37 @@ Please provide a helpful, accurate answer based only on the documentation above.
             return response.choices[0].message.content.strip()
         except Exception as e:
             return f"I encountered an error generating a response. Please try again. (Error: {str(e)[:100]})"
+
+    def _generate_with_hf(self, messages: List[Dict[str, str]]) -> str:
+        """Generate answer using Hugging Face API."""
+        try:
+            # Convert messages to a single prompt for HF
+            prompt = self._messages_to_prompt(messages)
+            
+            response = self.hf_client.text_generation(
+                prompt,
+                model=self.model,
+                max_new_tokens=self.max_tokens,
+                temperature=self.temperature,
+                do_sample=True
+            )
+            return response
+        except Exception as e:
+            return f"I encountered an error generating a response. Please try again. (Error: {str(e)[:100]})"
+
+    def _messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
+        """Convert chat messages to a single prompt string."""
+        prompt_parts = []
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+            if role == "system":
+                prompt_parts.append(f"System: {content}")
+            elif role == "user":
+                prompt_parts.append(f"User: {content}")
+            elif role == "assistant":
+                prompt_parts.append(f"Assistant: {content}")
+        return "\n\n".join(prompt_parts) + "\n\nAssistant:"
     
     def _generate_mock(self, question: str, documents: List[Document]) -> str:
         """Generate a mock answer for testing without API."""
