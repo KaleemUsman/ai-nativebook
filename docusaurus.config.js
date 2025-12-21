@@ -31,7 +31,7 @@ const config = {
 
   // Custom fields for chatbot API configuration
   customFields: {
-    chatbotApiUrl: process.env.CHATBOT_API_URL || 'http://localhost:8000',
+    chatbotApiUrl: process.env.CHATBOT_API_URL || 'https://kaleemusman-ai-nativebook.hf.space',
   },
 
   presets: [
