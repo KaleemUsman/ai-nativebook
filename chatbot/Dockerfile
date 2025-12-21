@@ -16,7 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY src/ ./src/
 COPY app.py .
-COPY qdrant_db/ ./qdrant_db/
+# Create directory for persistent storage
+RUN mkdir -p qdrant_db
 COPY docs/ ./docs/
 
 # Set environment variables
