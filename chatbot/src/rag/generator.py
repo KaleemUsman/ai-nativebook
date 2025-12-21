@@ -14,6 +14,12 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 try:
+    from openai_agents import Agent, Runner, tool
+    AGENTS_AVAILABLE = True
+except ImportError:
+    AGENTS_AVAILABLE = False
+
+try:
     from huggingface_hub import InferenceClient
     HF_AVAILABLE = True
 except ImportError:
@@ -24,22 +30,35 @@ from .retriever import Retriever, get_retriever, RetrievalResult
 from .vectorstore import Document
 
 
-SYSTEM_PROMPT_TEMPLATE = """You are a helpful AI assistant for the AI-Native Book on Physical AI & Humanoid Robotics.
+SYSTEM_PROMPT_TEMPLATE = """You are a friendly and knowledgeable AI assistant for the AI-Native Book on Physical AI & Humanoid Robotics.
 
-Your role is to answer questions ONLY based on the provided documentation context. Follow these rules strictly:
+I want you to act like a helpful human expert who's passionate about robotics and AI. Answer questions in a natural, conversational way - like you're chatting with a colleague over coffee.
 
-1. **Ground your answers**: Only use information from the provided context. Do not use external knowledge.
-2. **Cite sources**: Reference the source documents when providing information (e.g., "According to the ROS 2 Architecture guide...").
-3. **Be accurate**: If the context doesn't contain enough information to answer the question, say "I don't have information about that in the documentation."
-4. **Be helpful**: Provide clear, concise answers. Include relevant code examples if they appear in the context.
-5. **Stay on topic**: The documentation covers {module_list}.
+Key guidelines:
+- **Use only the provided context**: Base your answers entirely on the documentation excerpts given to you.
+- **Be conversational**: Use phrases like "Oh, that's a great question!" or "Let me explain this..." to make it feel human.
+- **Cite sources naturally**: Mention where the info comes from in a casual way, like "According to the ROS 2 guide..." or "In the Gazebo section, it says..."
+- **Admit limitations**: If the context doesn't cover something, say "Hmm, I'm not seeing that in the docs I have access to right now."
+- **Keep it engaging**: Ask follow-up questions or suggest related topics when appropriate.
+- **Stay on topic**: Focus on {module_list} and related robotics/AI concepts.
 
-If asked about topics not covered in the documentation (like current events, personal opinions, or unrelated subjects), politely explain that you can only answer questions about the book content.
-
-Remember: It's better to say "I don't know" than to make up information."""
+Remember, you're helping someone learn about this fascinating field - be encouraging and clear!"""
 
 
 NO_INFO_TEMPLATE = "I don't have information about that in the documentation. Could you try rephrasing your question or ask about {module_list}?"
+
+
+if AGENTS_AVAILABLE:
+    @tool
+    def get_book_context(query: str) -> str:
+        """Retrieve relevant context from the AI-Native Book based on the query."""
+        retriever = get_retriever()
+        result = retriever.retrieve(query)
+        if result.documents:
+            context = retriever.format_context(result.documents)
+            return f"Relevant book content:\n{context}"
+        else:
+            return "No relevant information found in the book."
 
 
 def get_available_modules(vector_store) -> List[str]:
@@ -161,7 +180,8 @@ class Generator:
         self,
         question: str,
         retrieval_result: Optional[RetrievalResult] = None,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        selected_text: Optional[str] = None
     ) -> GenerationResult:
         """
         Generate an answer for a question.
@@ -169,40 +189,69 @@ class Generator:
         Args:
             question: User question
             retrieval_result: Pre-retrieved documents (optional)
-            conversation_history: Previous messages (optional)
+            conversation_history: Previous messages (optional) - ignored for stateless
+            selected_text: User-selected text to base answer on (optional)
             
         Returns:
             GenerationResult with answer and metadata
         """
-        # Retrieve documents if not provided
-        if retrieval_result is None:
-            retrieval_result = self.retriever.retrieve(question)
-        
-        documents = retrieval_result.documents
-        
-        if not documents:
-            return GenerationResult(
-                answer=self.get_no_info_message(),
-                sources=[],
-                context_used="",
-                model=self.model,
-                is_grounded=True  # Saying "I don't know" is grounded
+        if AGENTS_AVAILABLE and self.openai_client:
+            # Use OpenAI Agents for soft-coded behavior
+            agent = Agent(
+                name="Book Chatbot",
+                instructions=self.system_prompt,
+                tools=[get_book_context],
+                model=self.model
             )
-        
-        # Format context
-        context = self.retriever.format_context(documents)
-        sources = self.retriever.get_sources(documents)
-        
-        # Build messages with dynamic system prompt
-        messages = [{"role": "system", "content": self.system_prompt}]
-        
-        # Add conversation history if provided
-        if conversation_history:
-            for msg in conversation_history[-4:]:  # Last 4 messages
-                messages.append(msg)
-        
-        # Add context and question
-        user_message = f"""Based on the following documentation:
+            
+            if selected_text:
+                user_query = f"Based on this selected text from the book: {selected_text}\n\nQuestion: {question}"
+            else:
+                user_query = question
+            
+            result = Runner.run(agent, user_query)
+            answer = result.final_output
+            
+            # Mock sources since agent doesn't provide them
+            sources = [{"title": "AI-Native Book", "path": "", "module": "", "snippet": selected_text[:200] if selected_text else ""}]
+            
+            return GenerationResult(
+                answer=answer,
+                sources=sources,
+                context_used=selected_text or "Retrieved via agent",
+                model=self.model,
+                is_grounded=True
+            )
+        else:
+            # Fallback to original RAG logic
+            if selected_text:
+                context = selected_text
+                sources = [{"title": "Selected Text", "path": "", "module": "", "snippet": selected_text[:200]}]
+            else:
+                # Retrieve documents if not provided
+                if retrieval_result is None:
+                    retrieval_result = self.retriever.retrieve(question)
+                
+                documents = retrieval_result.documents
+                
+                if not documents:
+                    return GenerationResult(
+                        answer=self.get_no_info_message(),
+                        sources=[],
+                        context_used="",
+                        model=self.model,
+                        is_grounded=True  # Saying "I don't know" is grounded
+                    )
+                
+                # Format context
+                context = self.retriever.format_context(documents)
+                sources = self.retriever.get_sources(documents)
+            
+            # Build messages with dynamic system prompt
+            messages = [{"role": "system", "content": self.system_prompt}]
+            
+            # Add context and question
+            user_message = f"""Based on the following documentation:
 
 {context}
 
@@ -212,26 +261,26 @@ Question: {question}
 
 Please provide a helpful, accurate answer based only on the documentation above. If the documentation doesn't contain the answer, say so."""
 
-        messages.append({"role": "user", "content": user_message})
-        
-        # Generate response
-        if self.openai_client:
-            answer = self._generate_with_openai(messages)
-        elif self.hf_client:
-            answer = self._generate_with_hf(messages)
-        else:
-            answer = self._generate_mock(question, documents)
-        
-        # Validate grounding
-        is_grounded = self._validate_grounding(answer, context)
-        
-        return GenerationResult(
-            answer=answer,
-            sources=sources,
-            context_used=context,
-            model=self.model,
-            is_grounded=is_grounded
-        )
+            messages.append({"role": "user", "content": user_message})
+            
+            # Generate response
+            if self.openai_client:
+                answer = self._generate_with_openai(messages)
+            elif self.hf_client:
+                answer = self._generate_with_hf(messages)
+            else:
+                answer = self._generate_mock(question, documents)
+            
+            # Validate grounding
+            is_grounded = self._validate_grounding(answer, context)
+            
+            return GenerationResult(
+                answer=answer,
+                sources=sources,
+                context_used=context,
+                model=self.model,
+                is_grounded=is_grounded
+            )
     
     def _generate_with_openai(self, messages: List[Dict[str, str]]) -> str:
         """Generate answer using OpenAI API."""

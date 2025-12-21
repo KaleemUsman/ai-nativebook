@@ -25,8 +25,8 @@ from src.rag.ingestion import ingest_documents
 
 router = APIRouter()
 
-# In-memory conversation storage (use Redis/DB in production)
-conversations: Dict[str, list] = {}
+# In-memory conversation storage (use Redis/DB in production) - disabled for stateless
+# conversations: Dict[str, list] = {}
 
 
 @router.post("/chat", response_model=ChatResponse, tags=["Chat"])
@@ -38,31 +38,35 @@ async def chat(request: ChatRequest) -> ChatResponse:
     source citations.
     """
     try:
-        # Get or create conversation
-        conv_id = request.conversation_id or str(uuid.uuid4())
-        history = conversations.get(conv_id, [])
+        # Stateless: no conversation history
+        # conv_id = request.conversation_id or str(uuid.uuid4())
+        # history = conversations.get(conv_id, [])
         
         # Get retriever and generator
         retriever = get_retriever()
         generator = get_generator()
         
-        # Retrieve relevant documents
-        retrieval_result = retriever.retrieve(
-            query=request.question,
-            filter_module=request.filter_module
-        )
+        # Handle selected text or retrieve documents
+        if request.selected_text:
+            retrieval_result = None  # Will use selected_text in generator
+        else:
+            retrieval_result = retriever.retrieve(
+                query=request.question,
+                filter_module=request.filter_module
+            )
         
         # Generate answer
         result = generator.generate(
             question=request.question,
             retrieval_result=retrieval_result,
-            conversation_history=history
+            conversation_history=None,  # Stateless
+            selected_text=request.selected_text
         )
         
-        # Update conversation history
-        history.append({"role": "user", "content": request.question})
-        history.append({"role": "assistant", "content": result.answer})
-        conversations[conv_id] = history[-10:]  # Keep last 10 messages
+        # Stateless: no history update
+        # history.append({"role": "user", "content": request.question})
+        # history.append({"role": "assistant", "content": result.answer})
+        # conversations[conv_id] = history[-10:]  # Keep last 10 messages
         
         # Convert sources to response format
         sources = [
@@ -78,7 +82,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         return ChatResponse(
             answer=result.answer,
             sources=sources,
-            conversation_id=conv_id,
+            conversation_id=None,  # Stateless
             is_grounded=result.is_grounded
         )
         
